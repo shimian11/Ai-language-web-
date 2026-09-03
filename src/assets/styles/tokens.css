@@ -1,0 +1,15 @@
+:root {
+  --bg: #faf9f6;
+  --card: #ffffff;
+  --ink: #1a1815;
+  --ink-2: #6b675f;
+  --line: #e8e4dc;
+  --accent: #e8590c;
+  --accent-ink: #b23f04;
+  --accent-soft: #fdeee3;
+  --ok: #2f9e44;
+  --radius: 14px;
+  --font-sans:
+    'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
