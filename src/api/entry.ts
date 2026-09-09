@@ -1,4 +1,5 @@
 import http from './request'
+import { USE_MOCK } from '@/config'
 import {
   mockCreateEntry,
   mockGetEntry,
@@ -27,9 +28,6 @@ export interface AdminOverview {
   totalViews: number
   recent: Entry[]
 }
-
-// 后端接口就绪后置为 false，切换到真实请求
-const USE_MOCK = true
 
 export function pageEntries(params: EntryPageParams): Promise<PageResult<Entry>> {
   if (USE_MOCK) return mockPageEntries(params)

@@ -1,4 +1,5 @@
 import http from './request'
+import { USE_MOCK } from '@/config'
 import {
   mockCreateCategory,
   mockListCategories,
@@ -8,9 +9,6 @@ import {
 } from '@/mock'
 
 import type { Category } from '@/types'
-
-// 后端接口就绪后置为 false，切换到真实请求
-const USE_MOCK = true
 
 export function listCategories(): Promise<Category[]> {
   if (USE_MOCK) return mockListCategories()
