@@ -3,7 +3,7 @@
     <header class="topbar">
       <div class="topbar-in">
         <RouterLink class="logo" to="/">
-          <span class="logo-mark">AI</span>
+          <img class="logo-img" :src="logoUrl" alt="AI 网页设计提示词库" />
           网页设计<em>提示词库</em>
         </RouterLink>
         <div class="search">
@@ -26,6 +26,7 @@ import { onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useEntryStore } from '@/stores/entry'
+import logoUrl from '@/assets/logo.jpg'
 
 const router = useRouter()
 const entryStore = useEntryStore()
@@ -83,16 +84,12 @@ onBeforeUnmount(() => window.clearTimeout(timer))
   letter-spacing: 0.5px;
 }
 
-.logo-mark {
-  width: 26px;
-  height: 26px;
+.logo-img {
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
-  background: var(--ink);
-  color: var(--bg);
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-family: var(--font-mono);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .logo em {

@@ -59,8 +59,20 @@ onBeforeUnmount(() => {
 <style scoped>
 .prompt-editor {
   --panel-border-color: var(--line);
+  width: 100%;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 9px;
   overflow: hidden;
+}
+
+/* Vditor 强制约束在容器宽度内，避免横向溢出 */
+.prompt-editor :deep(.vditor) {
+  width: 100%;
+  max-width: 100%;
+}
+
+.prompt-editor :deep(.vditor-toolbar) {
+  flex-wrap: wrap;
 }
 </style>

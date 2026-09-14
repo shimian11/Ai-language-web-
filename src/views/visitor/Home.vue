@@ -14,7 +14,11 @@
 
     <div class="filter-bar">
       <div class="filter-in">
-        <CategoryPills v-model="entryStore.categoryId" :categories="categoryStore.list" />
+        <TierFilter
+          :categories="categoryStore.list"
+          v-model:categoryId="entryStore.categoryId"
+          v-model:platform="entryStore.platform"
+        />
       </div>
     </div>
 
@@ -61,7 +65,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppPagination from '@/components/common/AppPagination.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageSkeleton from '@/components/common/PageSkeleton.vue'
-import CategoryPills from '@/components/business/CategoryPills.vue'
+import TierFilter from '@/components/business/TierFilter.vue'
 import EntryCard from '@/components/business/EntryCard.vue'
 import { useCategoryStore } from '@/stores/category'
 import { useEntryStore } from '@/stores/entry'
@@ -71,14 +75,14 @@ const router = useRouter()
 const categoryStore = useCategoryStore()
 const entryStore = useEntryStore()
 
-// 分类选择同步到 URL query，支持刷新与分享
+// 分类/平台选择同步到 URL query（分类），并触发查询
 watch(
-  () => entryStore.categoryId,
-  (value) => {
+  () => [entryStore.categoryId, entryStore.platform],
+  () => {
     entryStore.page = 1
     entryStore.fetchEntries()
     router.replace({
-      query: { ...route.query, category: value === undefined ? undefined : String(value) },
+      query: { ...route.query, category: entryStore.categoryId === undefined ? undefined : String(entryStore.categoryId) },
     })
   },
 )
@@ -114,6 +118,7 @@ function openEntry(id: number): void {
 function resetFilters(): void {
   entryStore.keyword = ''
   entryStore.categoryId = undefined
+  entryStore.platform = undefined
   entryStore.page = 1
   entryStore.fetchEntries()
 }

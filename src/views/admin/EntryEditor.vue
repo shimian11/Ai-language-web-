@@ -1,184 +1,217 @@
 <template>
-  <div class="page">
-    <div class="page-head">
-      <div class="crumb">
-        <RouterLink to="/admin/entries">管理后台</RouterLink>
-        <span>/</span>
-        <b>{{ isEdit ? '编辑案例' : '发布新提示词' }}</b>
+  <div class="editor-page">
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="crumb">
+          <RouterLink to="/admin/entries">管理后台</RouterLink>
+          <span>/</span>
+          <b>{{ isEdit ? '编辑案例' : '发布新提示词' }}</b>
+        </div>
+        <div class="spacer"></div>
+        <span class="state-chip">样式 <b id="styleChip">{{ pages.length }}</b> 个 · 编辑中·未保存</span>
+        <button class="btn" @click="onCancel">取消</button>
+        <button class="btn" :disabled="saving" @click="save('DRAFT')">存为草稿</button>
+        <button class="btn primary" :disabled="saving" @click="save('PUBLISHED')">发布</button>
       </div>
-      <div class="spacer"></div>
-      <span class="state-chip">
-        当前状态：
-        <b :style="{ color: status === 'PUBLISHED' ? 'var(--ok)' : 'var(--accent-ink)' }">
-          {{ status === 'PUBLISHED' ? '已发布' : '草稿' }}
-        </b>
-      </span>
-    </div>
+    </header>
 
-    <div class="editor-layout">
-      <!-- 左列：四步表单 -->
+    <main class="wrap">
+      <!-- 左列 -->
       <div>
         <div class="panel">
-          <div class="panel-title">基本信息 <span class="no">STEP 1</span></div>
+          <div class="panel-title">
+            基本发布信息 <span class="no">共享 · 对本案例所有样式生效</span>
+            <span class="shared-badge">已共享</span>
+          </div>
           <div class="panel-body">
             <div class="field">
               <label>案例标题 <span class="req">*</span></label>
-              <el-input v-model="form.title" placeholder="例如：指挥中心主视觉大屏：环形数据围绕核心指标" />
+              <input v-model="form.title" class="input" type="text" placeholder="例如：对齐类型布局集" />
             </div>
             <div class="field">
-              <label>简介说明 <span class="tip">一句话讲清这个设计的看点</span></label>
-              <el-input
-                v-model="form.summary"
-                type="textarea"
-                :rows="2"
-                placeholder="例如：中央放核心 KPI 大数字，四周环绕趋势图与环形占比，一眼锁定重点。"
-              />
+              <label>简介说明 <span class="tip">一句话讲清这组样式想表达什么</span></label>
+              <textarea v-model="form.summary" class="textarea" rows="2"></textarea>
             </div>
             <div class="row2">
               <div class="field">
-                <label>设计大类 <span class="req">*</span> <span class="tip">可直接新建</span></label>
-                <el-select v-model="form.categoryId" style="width: 100%" @change="onCategoryChange">
-                  <el-option
-                    v-for="category in categoryStore.list"
-                    :key="category.id"
-                    :label="category.name"
-                    :value="category.id"
-                  />
-                  <el-option label="＋ 新建大类…" :value="NEW_CATEGORY" />
-                </el-select>
+                <label>设计大类 <span class="req">*</span></label>
+                <select class="select" :value="categoryKey" @change="onCategoryChange">
+                  <option value="" disabled>请选择</option>
+                  <option v-for="c in categoryStore.list" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+                  <option value="__new">＋ 新建大类…</option>
+                </select>
                 <div v-if="showNewCategory" class="new-inline">
-                  <el-input
+                  <input
                     ref="newCategoryInputRef"
                     v-model="newCategoryName"
+                    class="input"
                     placeholder="输入新大类名称，如：登录页"
                     @keydown.enter="confirmNewCategory"
                   />
-                  <el-button type="primary" @click="confirmNewCategory">确认</el-button>
+                  <button class="btn" type="button" @click="confirmNewCategory">确认</button>
                 </div>
               </div>
               <div class="field">
-                <label>具体样式 <span class="req">*</span> <span class="tip">自由填写，如：中心聚焦型</span></label>
-                <el-input v-model="form.style" placeholder="例如：中心聚焦型" />
+                <label>适用平台</label>
+                <select v-model="form.platform" class="select">
+                  <option value="web">Web 网页端</option>
+                  <option value="app">App 应用端</option>
+                  <option value="general">通用</option>
+                </select>
               </div>
             </div>
             <div class="field">
-              <label>标签 <span class="tip">回车添加</span></label>
-              <el-input
+              <label>标签</label>
+              <input
                 v-model="tagInput"
-                placeholder="输入标签后回车确认"
+                class="input"
+                type="text"
+                placeholder="回车确认，多个用逗号分隔"
                 @keydown.enter.prevent="addTag"
               />
               <div v-if="form.tags.length" class="tagbox">
-                <span v-for="tag in form.tags" :key="tag" class="tag">
-                  {{ tag }}
-                  <button type="button" @click="removeTag(tag)">✕</button>
-                </span>
+                <span v-for="tag in form.tags" :key="tag" class="tag">{{ tag }}<button @click="removeTag(tag)">✕</button></span>
               </div>
             </div>
           </div>
         </div>
 
         <div class="panel">
-          <div class="panel-title">提示词 <span class="no">STEP 2 · 单份，支持 Markdown</span></div>
-          <div class="panel-body">
-            <PromptEditor v-model="form.prompt" :height="320" />
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">效果图（可选） <span class="no">STEP 3 · 未上传时仅以 HTML 演示作为展示</span></div>
-          <div class="panel-body">
-            <ImageUploader v-model="form.images" :upload="mockUpload" />
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">HTML 源码（推荐） <span class="no">STEP 4 · 动态效果首选 · 与效果图至少填一项</span></div>
-          <div class="panel-body">
-            <div class="tabbar">
-              <button :class="{ on: htmlTab === 'code' }" type="button" @click="htmlTab = 'code'">
-                源码
-              </button>
-              <button
-                :class="{ on: htmlTab === 'preview' }"
-                type="button"
-                @click="htmlTab = 'preview'"
-              >
-                实时预览
-              </button>
+          <div class="panel-title">案例列表 <span class="no">每页 = 一个独立案例 · 共享标题 / 简介 / 大类</span></div>
+          <div class="style-head">
+            <div class="cap">
+              同一大类下可同时录入多个独立案例：案例 1「左对齐」、案例 2「右对齐」……每个案例各自编辑 HTML、图片与提示词；切换分页或点「＋」新增案例，顶部共享信息（标题 / 简介 / 大类）保持不变。
             </div>
-            <el-input
-              v-show="htmlTab === 'code'"
-              v-model="form.htmlSource"
-              type="textarea"
-              :rows="10"
-              class="mono"
-              placeholder="<div>粘贴 AI 生成的 HTML 代码…</div>"
-            />
-            <HtmlPreview
-              v-if="htmlTab === 'preview'"
-              :source="form.htmlSource || '<body style=\'color:#7C8CA0;font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0\'>暂无 HTML 源码</body>'"
-              height="300px"
-              :lazy="false"
-            />
+            <div class="pager">
+              <button
+                v-for="(p, i) in pages"
+                :key="p.key"
+                class="page"
+                :class="{ on: i === activeIndex }"
+                type="button"
+                @click="switchPage(i)"
+              >
+                {{ i + 1 }}
+                <span v-if="pages.length > 1" class="del" @click.stop="removePage(i)">✕</span>
+              </button>
+              <button class="page add" type="button" @click="addPage">＋</button>
+              <span class="pager-sep"></span>
+              <span class="pager-count">案例 <b id="count">{{ pages.length }}</b> / {{ pages.length }}</span>
+            </div>
+          </div>
+
+          <div v-for="(p, i) in pages" :key="p.key" class="style-pane" :class="{ active: i === activeIndex }">
+            <div class="row2">
+              <div class="field">
+                <label>样式名称 <span class="req">*</span></label>
+                <input v-model="p.style" class="input" placeholder="例如：左对齐" />
+              </div>
+              <div class="field">
+                <label>推荐场景 <span class="tip">何时选用该样式</span></label>
+                <input v-model="p.scene" class="input" placeholder="例如：适合文字居多的正文排版" />
+              </div>
+            </div>
+            <div class="field">
+              <label>提示词 <span class="tip">该样式的生成提示词</span></label>
+              <textarea v-model="p.prompt" class="textarea mono" rows="5"></textarea>
+            </div>
+            <div class="field">
+              <label>效果图（可选）</label>
+              <div class="dropzone" @click="picker(i)">
+                <div class="icon">⬆️</div>
+                <div class="t1">拖拽图片到这里，或点击上传</div>
+                <div class="t2">支持 jpg / png / webp，单张 ≤ 5MB</div>
+              </div>
+              <input
+                ref="fileInputs"
+                class="hidden-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                @change="onFiles(i, $event)"
+              />
+              <div v-if="p.images.length" class="uploads">
+                <div v-for="(img, k) in p.images" :key="img.id" class="upload">
+                  <img :src="img.url" alt="效果图" />
+                  <span v-if="img.isMain" class="main-flag">主图</span>
+                  <div class="ops">
+                    <button type="button" @click="setMain(i, k)">设为主图</button>
+                    <button type="button" @click="removeImage(i, k)">删除</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label>HTML 源码（推荐）</label>
+              <div class="tabbar">
+                <button :class="{ on: p.tab === 'code' }" type="button" @click="p.tab = 'code'">源码</button>
+                <button :class="{ on: p.tab === 'preview' }" type="button" @click="p.tab = 'preview'">实时预览</button>
+              </div>
+              <textarea
+                v-show="p.tab === 'code'"
+                v-model="p.htmlSource"
+                class="textarea mono html-src"
+                rows="6"
+                placeholder="<div>粘贴 AI 生成的 HTML 代码…</div>"
+              ></textarea>
+              <iframe
+                v-show="p.tab === 'preview'"
+                class="preview"
+                sandbox="allow-same-origin"
+                :srcdoc="p.htmlSource || FALLBACK_HTML"
+              ></iframe>
+            </div>
+            <div class="pane-foot">
+              <button class="dels" type="button" @click="removePage(i)">删除此样式</button>
+              <span class="pane-note">HTML 源码与效果图至少填一项</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 右列：发布设置 -->
+      <!-- 右列 -->
       <aside>
         <div class="panel">
-          <div class="panel-title">发布设置</div>
+          <div class="panel-title">发布设置 <span class="no">共享</span></div>
           <div class="panel-body">
             <div class="publish-row">
               <span class="k">发布后首页可见</span>
-              <span class="v">{{ status === 'PUBLISHED' ? '是' : '否（草稿）' }}</span>
+              <div
+                class="switch"
+                :class="{ on: status === 'PUBLISHED' }"
+                :title="status === 'PUBLISHED' ? '已发布' : '草稿'"
+                @click="toggleStatus"
+              ></div>
             </div>
+            <div class="publish-row"><span class="k">样式版本数</span><span class="v">{{ pages.length }}（分页）</span></div>
             <div class="publish-row">
-              <span class="k">发布日期</span>
-              <span class="v">{{ form.publishedAt || '发布时自动记录' }}</span>
-            </div>
-            <div class="publish-row">
-              <span class="k">展示方式校验</span>
+              <span class="k">当前样式校验</span>
               <span class="v" :style="{ color: displayValid ? 'var(--ok)' : 'var(--accent)' }">
-                {{ displayValid ? '✓ 已满足' : '⚠ 效果图与 HTML 至少一项' }}
+                {{ displayValid ? '✓ HTML 已填写' : '⚠ 效果图与 HTML 至少一项' }}
               </span>
             </div>
             <div class="actions">
-              <el-button style="width: 100%" round @click="onCancel">取消</el-button>
-              <el-button style="width: 100%" round :loading="saving" @click="save('DRAFT')">
-                存为草稿
-              </el-button>
-              <el-button
-                style="width: 100%"
-                type="primary"
-                round
-                :loading="saving"
-                @click="save('PUBLISHED')"
-              >
-                发布
-              </el-button>
-              <el-button
-                v-if="isEdit && status === 'PUBLISHED'"
-                style="width: 100%"
-                round
-                @click="unpublish"
-              >
+              <button class="btn" style="height: 42px" :disabled="saving" @click="save('DRAFT')">存为草稿</button>
+              <button class="btn primary" style="height: 42px" :disabled="saving" @click="save('PUBLISHED')">发布</button>
+              <button v-if="isEdit && status === 'PUBLISHED'" class="btn" style="height: 42px" @click="unpublish">
                 转为草稿（下架）
-              </el-button>
+              </button>
             </div>
           </div>
         </div>
 
         <div class="help">
-          <b>展示方式说明</b><br />
-          效果图与 HTML 源码<b>至少填一项</b>（保存时自动校验）：<br />
-          · 纯 HTML → 详情页以动态渲染为主展示，卡片缩略图亦实时渲染<br />
-          · 纯图片 → 静态展示，适合位图类生成结果<br />
-          · 组合 → HTML 演示在前，效果图作为补充截图
+          <b>多案例说明（本组）</b><br />
+          · 顶部<b>共享信息</b>（标题 / 简介 / 大类 / 平台 / 标签）填一次<br />
+          · 下方<b>每个分页 = 一个独立案例</b>，各自编辑<i>样式名 / 推荐场景 / 提示词 / 效果图 / HTML</i><br />
+          · 「＋」新增案例，分页切换即切换到对该案例的编辑<br />
+          · 保存时每个案例各创建一条记录（共享标题 / 简介 / 大类）<br /><br />
+          <b>状态（仅两态）</b><br />
+          <i>草稿</i> → 编辑中，仅自己可见<br />
+          <i>已发布</i> → 首页与详情页可展示
         </div>
       </aside>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -186,16 +219,28 @@
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-
-import HtmlPreview from '@/components/business/HtmlPreview.vue'
-import ImageUploader from '@/components/business/ImageUploader.vue'
-import PromptEditor from '@/components/business/PromptEditor.vue'
 import { createEntry, getEntry, updateEntry } from '@/api/entry'
 import { useCategoryStore } from '@/stores/category'
+import type { Entry, EntryStatus, EntryImage, Platform } from '@/types'
 
-import type { Entry, EntryStatus } from '@/types'
+const FALLBACK_HTML =
+  "<body style='color:#7C8CA0;font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0'>暂无 HTML 源码</body>"
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_SIZE = 5 * 1024 * 1024
 
-const NEW_CATEGORY = -1
+let seq = 0
+const nextKey = () => `k${++seq}`
+
+interface CasePage {
+  key: string
+  id?: number
+  style: string
+  scene: string
+  prompt: string
+  htmlSource: string
+  images: EntryImage[]
+  tab: 'code' | 'preview'
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -206,29 +251,50 @@ const isEdit = computed(() => entryId.value !== undefined)
 
 const status = ref<EntryStatus>('DRAFT')
 const saving = ref(false)
-const htmlTab = ref<'code' | 'preview'>('code')
 
 const form = reactive({
   title: '',
   summary: '',
   categoryId: undefined as number | undefined,
-  style: '',
-  prompt: '',
-  htmlSource: '',
-  images: [] as Entry['images'],
+  platform: 'general' as Platform,
   tags: [] as string[],
-  publishedAt: undefined as string | undefined,
 })
 
+const pages = ref<CasePage[]>([newPage()])
+const activeIndex = ref(0)
+
+const categoryKey = ref('')
 const tagInput = ref('')
 const showNewCategory = ref(false)
 const newCategoryName = ref('')
 const newCategoryInputRef = ref()
+const fileInputs = ref<HTMLInputElement[]>([])
 
-const displayValid = computed(() => form.images.length > 0 || form.htmlSource.trim() !== '')
+const displayValid = computed(() => {
+  const p = pages.value[activeIndex.value]
+  return p ? p.images.length > 0 || p.htmlSource.trim() !== '' : false
+})
 
-const mockUpload = async (file: File): Promise<{ url: string }> => {
-  return { url: URL.createObjectURL(file) }
+function newPage(): CasePage {
+  return { key: nextKey(), style: '', scene: '', prompt: '', htmlSource: '', images: [], tab: 'code' }
+}
+
+function addPage(): void {
+  pages.value.push(newPage())
+  activeIndex.value = pages.value.length - 1
+}
+
+function switchPage(i: number): void {
+  activeIndex.value = i
+}
+
+function removePage(i: number): void {
+  if (pages.value.length <= 1) {
+    ElMessage.info('至少保留 1 个案例')
+    return
+  }
+  pages.value.splice(i, 1)
+  if (activeIndex.value >= pages.value.length) activeIndex.value = pages.value.length - 1
 }
 
 function addTag(): void {
@@ -239,14 +305,17 @@ function addTag(): void {
 }
 
 function removeTag(tag: string): void {
-  form.tags = form.tags.filter((item) => item !== tag)
+  form.tags = form.tags.filter((t) => t !== tag)
 }
 
-function onCategoryChange(value: number): void {
-  if (value === NEW_CATEGORY) {
+function onCategoryChange(event: Event): void {
+  const value = (event.target as HTMLSelectElement).value
+  if (value === '__new') {
+    form.categoryId = undefined
     showNewCategory.value = true
     nextTick(() => newCategoryInputRef.value?.focus?.())
   } else {
+    form.categoryId = Number(value)
     showNewCategory.value = false
   }
 }
@@ -256,9 +325,51 @@ async function confirmNewCategory(): Promise<void> {
   if (!name) return
   const created = await categoryStore.addCategory(name)
   form.categoryId = created.id
+  categoryKey.value = String(created.id)
   showNewCategory.value = false
   newCategoryName.value = ''
   ElMessage.success(`已创建大类「${name}」`)
+}
+
+function toggleStatus(): void {
+  status.value = status.value === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'
+}
+
+// ===== 图片上传（原生 dropzone，对齐原型）=====
+function picker(i: number): void {
+  fileInputs.value[i]?.click()
+}
+
+function onFiles(i: number, event: Event): void {
+  const files = Array.from((event.target as HTMLInputElement).files ?? [])
+  ;(event.target as HTMLInputElement).value = ''
+  for (const file of files) addFile(i, file)
+}
+
+async function addFile(i: number, file: File): Promise<void> {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    ElMessage.error(`不支持的图片格式：${file.name}`)
+    return
+  }
+  if (file.size > MAX_SIZE) {
+    ElMessage.error(`图片超过 5MB 限制：${file.name}`)
+    return
+  }
+  const url = URL.createObjectURL(file)
+  const list = pages.value[i].images
+  const next = [...list, { id: -Date.now() - list.length, url, isMain: list.length === 0 }]
+  pages.value[i].images = next
+}
+
+function setMain(i: number, k: number): void {
+  pages.value[i].images = pages.value[i].images.map((img, idx) => ({ ...img, isMain: idx === k }))
+}
+
+function removeImage(i: number, k: number): void {
+  const list = pages.value[i].images
+  const next = list.filter((_, idx) => idx !== k)
+  if (list[k]?.isMain && next.length) next[0] = { ...next[0], isMain: true }
+  pages.value[i].images = next
 }
 
 function validate(): boolean {
@@ -266,22 +377,27 @@ function validate(): boolean {
     ElMessage.warning('请填写案例标题')
     return false
   }
-  if (form.categoryId === undefined || form.categoryId === NEW_CATEGORY) {
+  if (form.categoryId === undefined) {
     ElMessage.warning('请选择设计大类')
     return false
   }
-  if (!form.style.trim()) {
-    ElMessage.warning('请填写具体样式')
+  if (pages.value.length === 0) {
+    ElMessage.warning('请至少添加一个案例')
     return false
   }
-  if (!displayValid.value) {
-    ElMessage.warning('效果图与 HTML 源码至少填一项')
-    return false
+  for (const [i, p] of pages.value.entries()) {
+    if (!p.style.trim()) {
+      ElMessage.warning(`请填写第 ${i + 1} 个样式的名称`)
+      return false
+    }
+    if (!(p.images.length > 0 || p.htmlSource.trim() !== '')) {
+      ElMessage.warning(`第 ${i + 1} 个样式：效果图与 HTML 源码至少填一项`)
+      return false
+    }
   }
   return true
 }
 
-// 智能返回：有站内历史则回退（保留来源页），直接输入 URL 进入时回落到案例列表
 function onCancel(): void {
   if (window.history.state?.back) {
     router.back()
@@ -294,25 +410,25 @@ async function save(targetStatus: EntryStatus): Promise<void> {
   if (!validate()) return
   saving.value = true
   try {
-    const payload: Partial<Entry> = {
-      title: form.title.trim(),
-      summary: form.summary.trim(),
-      categoryId: form.categoryId,
-      style: form.style.trim(),
-      prompt: form.prompt,
-      htmlSource: form.htmlSource.trim() || undefined,
-      images: form.images,
-      tags: form.tags,
-      status: targetStatus,
+    for (const p of pages.value) {
+      const summary = p.scene.trim() ? `${form.summary.trim()}\n适用场景：${p.scene.trim()}` : form.summary.trim()
+      const payload: Partial<Entry> = {
+        title: form.title.trim(),
+        summary,
+        categoryId: form.categoryId,
+        platform: form.platform,
+        style: p.style.trim(),
+        prompt: p.prompt,
+        htmlSource: p.htmlSource.trim() || undefined,
+        images: p.images,
+        tags: form.tags,
+        status: targetStatus,
+      }
+      if (p.id) await updateEntry(p.id, payload)
+      else await createEntry(payload)
     }
-    if (isEdit.value) {
-      await updateEntry(entryId.value as number, payload)
-      status.value = targetStatus
-    } else {
-      await createEntry(payload)
-      status.value = targetStatus
-    }
-    ElMessage.success(targetStatus === 'PUBLISHED' ? '已发布' : '已存为草稿')
+    status.value = targetStatus
+    ElMessage.success(targetStatus === 'PUBLISHED' ? `已发布 ${pages.value.length} 个案例` : `已存为草稿 ${pages.value.length} 个案例`)
     router.push({ name: 'admin-entry-list' })
   } finally {
     saving.value = false
@@ -328,38 +444,57 @@ async function unpublish(): Promise<void> {
 }
 
 onMounted(async () => {
-  if (!categoryStore.list.length) {
-    await categoryStore.fetchCategories()
-  }
+  if (!categoryStore.list.length) await categoryStore.fetchCategories()
   if (isEdit.value) {
     const entry = await getEntry(entryId.value as number)
     form.title = entry.title
-    form.summary = entry.summary
     form.categoryId = entry.categoryId
-    form.style = entry.style
-    form.prompt = entry.prompt
-    form.htmlSource = entry.htmlSource ?? ''
-    form.images = entry.images
+    categoryKey.value = String(entry.categoryId)
+    form.platform = entry.platform || 'general'
     form.tags = [...entry.tags]
-    form.publishedAt = entry.publishedAt
     status.value = entry.status
+    const sceneLine = entry.summary.split('\n').find((l) => l.startsWith('适用场景：'))
+    const scene = sceneLine ? sceneLine.replace(/^适用场景：/, '') : ''
+    form.summary = entry.summary
+      .split('\n')
+      .filter((l) => !l.startsWith('适用场景：'))
+      .join('\n')
+      .trimEnd()
+    pages.value = [
+      {
+        key: nextKey(),
+        id: entry.id,
+        style: entry.style,
+        scene,
+        prompt: entry.prompt,
+        htmlSource: entry.htmlSource ?? '',
+        images: entry.images ?? [],
+        tab: 'code',
+      },
+    ]
+    activeIndex.value = 0
   }
 })
 </script>
 
 <style scoped>
-.page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-bottom: 60px;
+/* ===== 顶部横条 ===== */
+.topbar {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
-.page-head {
-  padding: 32px 32px 20px;
+.topbar-in {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 58px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 20px;
 }
 
 .crumb {
@@ -370,13 +505,18 @@ onMounted(async () => {
   align-items: center;
 }
 
-.crumb a:hover {
-  color: var(--accent-ink);
-}
-
 .crumb b {
   color: var(--ink);
   font-weight: 600;
+}
+
+.crumb a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.crumb a:hover {
+  color: var(--accent-ink);
 }
 
 .spacer {
@@ -389,19 +529,61 @@ onMounted(async () => {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 4px 12px;
-  background: var(--card);
+  background: var(--bg);
 }
 
-.editor-layout {
-  padding: 0 32px;
+.state-chip b {
+  color: var(--accent-ink);
+}
+
+.btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  transition: 0.15s;
+  font-family: inherit;
+}
+
+.btn:hover {
+  border-color: var(--ink);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.btn.primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ===== 主体布局 ===== */
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 28px 80px;
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 400px;
   gap: 22px;
   align-items: start;
 }
 
 @media (max-width: 1020px) {
-  .editor-layout {
+  .wrap {
     grid-template-columns: 1fr;
   }
 }
@@ -409,7 +591,7 @@ onMounted(async () => {
 .panel {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 14px;
   overflow: hidden;
 }
 
@@ -428,16 +610,26 @@ onMounted(async () => {
 }
 
 .panel-title .no {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono, monospace);
   font-size: 11px;
   color: var(--ink-2);
   font-weight: 400;
+}
+
+.panel-title .shared-badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-radius: 5px;
+  padding: 2px 8px;
 }
 
 .panel-body {
   padding: 20px;
 }
 
+/* ===== 表单 ===== */
 .field {
   margin-bottom: 18px;
 }
@@ -453,15 +645,57 @@ onMounted(async () => {
   margin-bottom: 7px;
 }
 
-.req {
+.field .req {
   color: var(--accent);
 }
 
-.tip {
+.field .tip {
   font-weight: 400;
   color: var(--ink-2);
   font-size: 12px;
   margin-left: 6px;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--card);
+  outline: none;
+  transition: border 0.15s;
+  font-family: inherit;
+  padding: 0 12px;
+}
+
+.input {
+  height: 40px;
+}
+
+.select {
+  height: 40px;
+  appearance: auto;
+}
+
+.textarea {
+  padding: 10px 12px;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--accent);
+}
+
+.textarea.mono {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  line-height: 1.8;
 }
 
 .row2 {
@@ -476,7 +710,13 @@ onMounted(async () => {
   margin-top: 8px;
 }
 
-.new-inline .el-button {
+.new-inline .input {
+  flex: 1;
+}
+
+.new-inline .btn {
+  height: 40px;
+  border-radius: 9px;
   flex-shrink: 0;
 }
 
@@ -511,6 +751,201 @@ onMounted(async () => {
   color: var(--accent);
 }
 
+/* ===== 分页导航 ===== */
+.style-head {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.style-head .cap {
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.pager {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.page {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: 0.15s;
+  position: relative;
+  font-family: inherit;
+}
+
+.page:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.page.on {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.page .del {
+  font-size: 11px;
+  color: inherit;
+  opacity: 0.55;
+}
+
+.page .del:hover {
+  opacity: 1;
+}
+
+.page.add {
+  font-weight: 600;
+  color: var(--accent-ink);
+  border-style: dashed;
+  width: 38px;
+  padding: 0;
+}
+
+.page.add:hover {
+  background: var(--accent-soft);
+}
+
+.pager-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+}
+
+.pager-count {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.pager-count b {
+  color: var(--ink);
+}
+
+/* ===== 每个样式分页内容 ===== */
+.style-pane {
+  display: none;
+  padding: 20px;
+}
+
+.style-pane.active {
+  display: block;
+}
+
+/* 图片上传 */
+.dropzone {
+  border: 1.5px dashed #cfc9bd;
+  border-radius: 12px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.15s;
+  background: var(--bg);
+}
+
+.dropzone:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropzone .icon {
+  font-size: 24px;
+}
+
+.dropzone .t1 {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dropzone .t2 {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.hidden-input {
+  display: none;
+}
+
+.uploads {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.upload {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.upload img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+}
+
+.main-flag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 10.5px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-weight: 600;
+}
+
+.ops {
+  display: flex;
+  border-top: 1px solid var(--line);
+}
+
+.ops button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.ops button:first-child {
+  border-right: 1px solid var(--line);
+}
+
+.ops button:hover {
+  color: var(--accent-ink);
+  background: var(--bg);
+}
+
+/* HTML 源码 + 实时预览 */
 .tabbar {
   display: flex;
   gap: 6px;
@@ -526,21 +961,54 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--ink-2);
   cursor: pointer;
+  font-family: inherit;
 }
 
 .tabbar button.on {
   background: var(--ink);
-  color: var(--card);
+  color: var(--bg);
   border-color: var(--ink);
   font-weight: 600;
 }
 
-.mono :deep(textarea) {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.7;
+.preview {
+  width: 100%;
+  height: 280px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0b1220;
+  display: block;
 }
 
+.pane-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.dels {
+  color: #e5484d;
+  font-size: 12.5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-family: inherit;
+}
+
+.dels:hover {
+  text-decoration: underline;
+}
+
+.pane-note {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+/* ===== 右侧发布面板 ===== */
 .publish-row {
   display: flex;
   align-items: center;
@@ -548,6 +1016,10 @@ onMounted(async () => {
   padding: 11px 0;
   border-bottom: 1px dashed var(--line);
   font-size: 13.5px;
+}
+
+.publish-row:last-of-type {
+  border-bottom: none;
 }
 
 .publish-row .k {
@@ -558,15 +1030,40 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.switch {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cfc9bd;
+  position: relative;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: 0.15s;
+}
+
+.switch.on {
+  background: var(--accent);
+}
+
+.switch.on::after {
+  left: 18px;
+}
+
 .actions {
   display: grid;
   gap: 10px;
   margin-top: 16px;
-}
-
-.actions .el-button {
-  width: 100%;
-  margin-left: 0;
 }
 
 .help {
@@ -574,7 +1071,7 @@ onMounted(async () => {
   font-size: 12px;
   color: var(--ink-2);
   line-height: 1.8;
-  background: var(--card);
+  background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
@@ -582,5 +1079,10 @@ onMounted(async () => {
 
 .help b {
   color: var(--ink);
+}
+
+.help i {
+  font-style: normal;
+  color: var(--accent-ink);
 }
 </style>

@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 
 import { pageEntries } from '@/api/entry'
 
-import type { Entry, EntryStatus } from '@/types'
+import type { Entry, EntryStatus, Platform } from '@/types'
 
 export const useEntryStore = defineStore('entry', () => {
   const list = ref<Entry[]>([])
@@ -11,6 +11,7 @@ export const useEntryStore = defineStore('entry', () => {
   const page = ref(1)
   const size = ref(20)
   const categoryId = ref<number>()
+  const platform = ref<Platform>()
   const keyword = ref('')
   const status = ref<EntryStatus>()
   const loading = ref(false)
@@ -22,6 +23,7 @@ export const useEntryStore = defineStore('entry', () => {
         page: page.value,
         size: size.value,
         categoryId: categoryId.value,
+        platform: platform.value,
         keyword: keyword.value || undefined,
         status: status.value,
       })
@@ -32,5 +34,16 @@ export const useEntryStore = defineStore('entry', () => {
     }
   }
 
-  return { list, total, page, size, categoryId, keyword, status, loading, fetchEntries }
+  return {
+    list,
+    total,
+    page,
+    size,
+    categoryId,
+    platform,
+    keyword,
+    status,
+    loading,
+    fetchEntries,
+  }
 })

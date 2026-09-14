@@ -11,12 +11,14 @@ import {
   mockUpdateEntryStatus,
 } from '@/mock'
 
-import type { Entry, EntryStatus, PageResult } from '@/types'
+import type { Entry, EntryStatus, PageResult, Platform } from '@/types'
 
 export interface EntryPageParams {
   page: number
   size: number
   categoryId?: number
+  platform?: Platform
+  style?: string
   keyword?: string
   status?: EntryStatus
 }

@@ -18,6 +18,8 @@ export interface Category {
   entryCount?: number
 }
 
+export type Platform = 'web' | 'app' | 'general'
+
 export type EntryStatus = 'DRAFT' | 'PUBLISHED'
 
 export interface EntryImage {
@@ -32,6 +34,7 @@ export interface Entry {
   summary: string
   categoryId: number
   categoryName?: string
+  platform?: Platform
   style: string
   prompt: string
   htmlSource?: string

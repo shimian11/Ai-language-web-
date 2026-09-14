@@ -38,18 +38,25 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue') },
       { path: 'entries', name: 'admin-entry-list', component: () => import('@/views/admin/EntryList.vue') },
-      { path: 'entries/new', name: 'admin-entry-new', component: () => import('@/views/admin/EntryEditor.vue') },
-      {
-        path: 'entries/:id/edit',
-        name: 'admin-entry-edit',
-        component: () => import('@/views/admin/EntryEditor.vue'),
-      },
       {
         path: 'categories',
         name: 'admin-categories',
         component: () => import('@/views/admin/CategoryManage.vue'),
       },
     ],
+  },
+  // 发布 / 编辑案例：全屏独立页（不带左侧导航栏），避免侧边栏挤压两列布局
+  {
+    path: '/admin/entries/new',
+    name: 'admin-entry-new',
+    component: () => import('@/views/admin/EntryEditor.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/entries/:id/edit',
+    name: 'admin-entry-edit',
+    component: () => import('@/views/admin/EntryEditor.vue'),
+    meta: { requiresAuth: true },
   },
 ]
 

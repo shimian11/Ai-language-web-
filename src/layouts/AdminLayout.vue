@@ -2,7 +2,7 @@
   <div class="admin">
     <aside class="side">
       <div class="side-logo">
-        <span class="mark">AI</span>
+        <img class="side-logo-img" :src="logoUrl" alt="提示词库" />
         <div>
           <b>提示词库</b>
           <span>管理后台</span>
@@ -49,6 +49,7 @@
 import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import logoUrl from '@/assets/logo.jpg'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,17 +82,11 @@ function onLogout(): void {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.side-logo .mark {
-  width: 30px;
-  height: 30px;
+.side-logo-img {
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  background: var(--accent);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  font-weight: 700;
+  object-fit: cover;
   flex-shrink: 0;
 }
 
