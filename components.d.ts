@@ -24,6 +24,7 @@ declare module 'vue' {
     PromptEditor: typeof import('./src/components/business/PromptEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Thumb: typeof import('./src/components/common/Thumb.vue')['default']
     TierFilter: typeof import('./src/components/business/TierFilter.vue')['default']
   }
 }
