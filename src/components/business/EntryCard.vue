@@ -6,8 +6,9 @@
         :source="entry.htmlSource"
         height="100%"
         :title="entry.title"
+        :lazy="false"
       />
-      <img v-else-if="cover" :src="cover" :alt="entry.title" loading="lazy" />
+      <Thumb v-else :src="cover" :text="entry.title" />
       <span v-if="entry.htmlSource" class="badge"><i></i>HTML 实时渲染</span>
     </div>
     <div class="card-body">
@@ -30,6 +31,7 @@
 import { computed } from 'vue'
 
 import HtmlPreview from '@/components/business/HtmlPreview.vue'
+import Thumb from '@/components/common/Thumb.vue'
 import { useCopy } from '@/composables/useCopy'
 
 import type { Entry } from '@/types'
@@ -45,7 +47,7 @@ const cover = computed(
 )
 
 function onCopy(): void {
-  copy(props.entry.prompt)
+  copy(props.entry.prompt, props.entry.id)
 }
 </script>
 
@@ -84,6 +86,17 @@ function onCopy(): void {
 
 .card:hover .card-img img {
   transform: scale(1.03);
+}
+
+.card-img :deep(.thumb) {
+  position: absolute;
+  inset: 0;
+}
+
+.card-img :deep(.html-preview) {
+  position: absolute;
+  inset: 0;
+  height: auto;
 }
 
 .badge {
