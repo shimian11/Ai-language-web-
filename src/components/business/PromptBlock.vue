@@ -22,6 +22,8 @@ const props = withDefaults(
   defineProps<{
     prompt: string
     label?: string
+    /** 传入案例 ID 时复制成功后累加该案例的复制计数 */
+    entryId?: number
   }>(),
   { label: '' },
 )
@@ -30,7 +32,7 @@ const { copy } = useCopy()
 const copied = ref(false)
 
 function onCopy(): void {
-  copy(props.prompt)
+  copy(props.prompt, props.entryId)
   copied.value = true
   setTimeout(() => {
     copied.value = false
