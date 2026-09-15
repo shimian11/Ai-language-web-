@@ -5,6 +5,7 @@
         <RouterLink class="logo" to="/">
           <img class="logo-img" :src="logoUrl" alt="AI 网页设计提示词库" />
           网页设计<em>提示词库</em>
+          <span class="logo-tag">个人博客总结网站</span>
         </RouterLink>
         <div class="search">
           <input
@@ -95,6 +96,15 @@ onBeforeUnmount(() => window.clearTimeout(timer))
 .logo em {
   font-style: normal;
   color: var(--accent);
+}
+
+.logo-tag {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-2);
+  opacity: 0.75;
+  letter-spacing: 0;
+  margin-left: 2px;
 }
 
 .search {
