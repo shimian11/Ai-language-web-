@@ -46,7 +46,7 @@
             <div class="panel-body">
               <div class="preview-bar">
                 <span>案例附带的 HTML 源码（沙箱隔离渲染）</span>
-                <span class="tagmono">sandbox: allow-same-origin</span>
+                <span class="tagmono">sandbox: allow-scripts</span>
               </div>
               <HtmlPreview :source="entry.htmlSource" height="480px" />
             </div>
@@ -73,7 +73,7 @@
         </div>
 
         <aside>
-          <PromptBlock :prompt="entry.prompt" :label="`PROMPT · ${entry.prompt.length} 字`">
+          <PromptBlock :prompt="entry.prompt" :entry-id="entry.id" :label="`PROMPT · ${entry.prompt.length} 字`">
             <template #footer>
               <span>单份提示词 · v1.0</span>
               <span>{{ entry.publishedAt || entry.createdAt }} 定稿</span>
@@ -106,7 +106,7 @@
                   class="rel-item"
                   @click="router.push({ name: 'entry-detail', params: { id: String(item.id) } })"
                 >
-                  <img :src="item.images[0]?.url ?? ''" alt="" />
+                  <Thumb :src="item.images[0]?.url ?? ''" :text="item.title" class="rel-thumb" />
                   <div>
                     <div class="t">{{ item.title }}</div>
                     <div class="c">{{ item.categoryName }} · {{ item.style }}</div>
@@ -129,6 +129,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import PageSkeleton from '@/components/common/PageSkeleton.vue'
 import HtmlPreview from '@/components/business/HtmlPreview.vue'
 import PromptBlock from '@/components/business/PromptBlock.vue'
+import Thumb from '@/components/common/Thumb.vue'
 import { getEntry, listRelated } from '@/api/entry'
 import { useCopy } from '@/composables/useCopy'
 import { useFavorites } from '@/composables/useFavorites'
@@ -174,7 +175,7 @@ function toggleFav(): void {
 
 async function copyTop(): Promise<void> {
   if (!entry.value) return
-  await copy(entry.value.prompt)
+  await copy(entry.value.prompt, entry.value.id)
   copyDone.value = true
   setTimeout(() => {
     copyDone.value = false
@@ -459,11 +460,11 @@ h1 {
   box-shadow: 0 6px 18px rgba(26, 24, 21, 0.07);
 }
 
-.rel-item img {
+.rel-item .rel-thumb {
   width: 72px;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
+  height: 54px;
   border-radius: 6px;
+  border: 1px solid var(--line);
 }
 
 .rel-item .t {
