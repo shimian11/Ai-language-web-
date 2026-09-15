@@ -2,6 +2,7 @@ import http from './request'
 import { USE_MOCK } from '@/config'
 import {
   mockCreateEntry,
+  mockEntryGroups,
   mockGetEntry,
   mockOverview,
   mockPageEntries,
@@ -11,13 +12,14 @@ import {
   mockUpdateEntryStatus,
 } from '@/mock'
 
-import type { Entry, EntryStatus, PageResult, Platform } from '@/types'
+import type { Entry, EntryGroup, EntryStatus, PageResult, Platform } from '@/types'
 
 export interface EntryPageParams {
   page: number
   size: number
   categoryId?: number
   platform?: Platform
+  title?: string
   style?: string
   keyword?: string
   status?: EntryStatus
@@ -34,6 +36,13 @@ export interface AdminOverview {
 export function pageEntries(params: EntryPageParams): Promise<PageResult<Entry>> {
   if (USE_MOCK) return mockPageEntries(params)
   return http.get<PageResult<Entry>>('/entries', params)
+}
+
+export function entryGroups(
+  params: Pick<EntryPageParams, 'status' | 'keyword' | 'platform'>,
+): Promise<EntryGroup[]> {
+  if (USE_MOCK) return mockEntryGroups(params)
+  return http.get<EntryGroup[]>('/entries/groups', params)
 }
 
 export function getEntry(id: number): Promise<Entry> {
@@ -54,6 +63,11 @@ export function updateEntry(id: number, data: Partial<Entry>): Promise<void> {
 export function updateEntryStatus(id: number, status: EntryStatus): Promise<void> {
   if (USE_MOCK) return mockUpdateEntryStatus(id, status)
   return http.put(`/entries/${id}/status`, { status })
+}
+
+export function incrementCopy(id: number): Promise<void> {
+  if (USE_MOCK) return Promise.resolve()
+  return http.post(`/entries/${id}/copy`)
 }
 
 export function removeEntry(id: number): Promise<void> {
