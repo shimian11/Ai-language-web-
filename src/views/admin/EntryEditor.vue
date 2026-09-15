@@ -157,7 +157,7 @@
               <iframe
                 v-show="p.tab === 'preview'"
                 class="preview"
-                sandbox="allow-same-origin"
+                sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
                 :srcdoc="p.htmlSource || FALLBACK_HTML"
               ></iframe>
             </div>
