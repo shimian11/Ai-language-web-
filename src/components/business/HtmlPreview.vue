@@ -3,7 +3,7 @@
     <iframe
       v-if="shouldRender"
       :srcdoc="source"
-      sandbox="allow-same-origin"
+      sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
       :title="title"
       loading="lazy"
     ></iframe>
