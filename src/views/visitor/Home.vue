@@ -3,7 +3,7 @@
     <section class="hero">
       <div class="hero-copy">
         <h1>搜集<span>好提示词</span>，<br />复现好设计。</h1>
-        <p>记录 AI 生成网页设计的效果与提示词，按设计模式与具体样式归档，随取随用。</p>
+        <p>用 AI 将想到却不知怎么说的效果实现——记录生成效果与提示词，按设计模式归档，随取随用。</p>
       </div>
       <div class="prompt-cards" aria-hidden="true">
         <div class="pc pc1"><i></i><b>中心聚焦型 · 大屏设计</b><span class="txt">深蓝底色，青色高亮，科幻指挥舱 HUD…</span></div>
