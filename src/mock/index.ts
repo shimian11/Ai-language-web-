@@ -1,4 +1,4 @@
-import type { Category, Entry, PageResult } from '@/types'
+import type { Category, Entry, EntryGroup, PageResult } from '@/types'
 
 export type MockEntryStatus = 'DRAFT' | 'PUBLISHED'
 
@@ -7,6 +7,7 @@ interface MockPageParams {
   size: number
   categoryId?: number
   keyword?: string
+  title?: string
   status?: MockEntryStatus
 }
 
@@ -270,6 +271,9 @@ export function mockPageEntries(params: MockPageParams): Promise<PageResult<Entr
   if (params.categoryId !== undefined) {
     list = list.filter((entry) => entry.categoryId === params.categoryId)
   }
+  if (params.title) {
+    list = list.filter((entry) => entry.title === params.title)
+  }
   if (params.keyword) {
     const keyword = params.keyword.toLowerCase()
     list = list.filter(
@@ -289,6 +293,27 @@ export function mockPageEntries(params: MockPageParams): Promise<PageResult<Entr
     page: params.page,
     size: params.size,
   })
+}
+
+export function mockEntryGroups(params: { status?: MockEntryStatus; keyword?: string }): Promise<EntryGroup[]> {
+  let list = [...rawEntries]
+  if (params.status) list = list.filter((entry) => entry.status === params.status)
+  if (params.keyword) list = list.filter((entry) => entry.title.toLowerCase().includes(params.keyword!.toLowerCase()))
+  const map = new Map<string, EntryGroup>()
+  for (const entry of list) {
+    const key = `${entry.categoryId}::${entry.title}`
+    if (!map.has(key)) {
+      map.set(key, {
+        categoryId: entry.categoryId,
+        categoryName: categoryNameOf(entry.categoryId),
+        title: entry.title,
+        count: 0,
+        cover: entry.images[0]?.url,
+      })
+    }
+    map.get(key)!.count += 1
+  }
+  return delay(Array.from(map.values()))
 }
 
 export function mockGetEntry(id: number): Promise<Entry> {
