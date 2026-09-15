@@ -28,6 +28,15 @@ export interface EntryImage {
   isMain: boolean
 }
 
+/** 后台分组视图：按 (设计大类, 案例标题) 聚合的一组 */
+export interface EntryGroup {
+  categoryId: number
+  categoryName: string
+  title: string
+  count: number
+  cover?: string
+}
+
 export interface Entry {
   id: number
   title: string
