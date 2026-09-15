@@ -234,6 +234,8 @@ const nextKey = () => `k${++seq}`
 interface CasePage {
   key: string
   id?: number
+  /** 该分页在库中的现有状态；仅用于判断“已发布分页不应被‘存为草稿’误降级” */
+  status: EntryStatus
   style: string
   scene: string
   prompt: string
@@ -276,7 +278,7 @@ const displayValid = computed(() => {
 })
 
 function newPage(): CasePage {
-  return { key: nextKey(), style: '', scene: '', prompt: '', htmlSource: '', images: [], tab: 'code' }
+  return { key: nextKey(), status: 'DRAFT', style: '', scene: '', prompt: '', htmlSource: '', images: [], tab: 'code' }
 }
 
 function addPage(): void {
@@ -409,8 +411,13 @@ function onCancel(): void {
 async function save(targetStatus: EntryStatus): Promise<void> {
   if (!validate()) return
   saving.value = true
+  let changedCount = 0
   try {
     for (const p of pages.value) {
+      // 已发布的分页不因“存为草稿”而降级（下架请用专属按钮 unpublish）；
+      // 其余情况（新分页 / 草稿分页）按本次按钮意图设置状态。
+      const keepPublished = p.id !== undefined && p.status === 'PUBLISHED' && targetStatus === 'DRAFT'
+      const appliedStatus = keepPublished ? 'PUBLISHED' : targetStatus
       const summary = p.scene.trim() ? `${form.summary.trim()}\n适用场景：${p.scene.trim()}` : form.summary.trim()
       const payload: Partial<Entry> = {
         title: form.title.trim(),
@@ -422,13 +429,21 @@ async function save(targetStatus: EntryStatus): Promise<void> {
         htmlSource: p.htmlSource.trim() || undefined,
         images: p.images,
         tags: form.tags,
-        status: targetStatus,
+        status: appliedStatus,
       }
       if (p.id) await updateEntry(p.id, payload)
       else await createEntry(payload)
+      if (appliedStatus === targetStatus) changedCount++
+      p.status = appliedStatus
     }
     status.value = targetStatus
-    ElMessage.success(targetStatus === 'PUBLISHED' ? `已发布 ${pages.value.length} 个案例` : `已存为草稿 ${pages.value.length} 个案例`)
+    ElMessage.success(
+      targetStatus === 'PUBLISHED'
+        ? `已发布 ${changedCount} 个案例`
+        : changedCount > 0
+          ? `已存为草稿 ${changedCount} 个案例${pages.value.length > changedCount ? `，另有 ${pages.value.length - changedCount} 个已发布案例保持不变` : ''}`
+          : '无新内容待存为草稿',
+    )
     router.push({ name: 'admin-entry-list' })
   } finally {
     saving.value = false
@@ -464,6 +479,7 @@ onMounted(async () => {
       {
         key: nextKey(),
         id: entry.id,
+        status: entry.status,
         style: entry.style,
         scene,
         prompt: entry.prompt,

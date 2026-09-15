@@ -6,7 +6,7 @@ import { clearToken, getToken } from '@/utils/auth'
 
 import type { ApiResponse } from '@/types'
 
-// 成功码约定待后端 API 文档对齐，暂按 0 处理
+// 与后端 ResultCode 对齐：code=0 成功；401 未登录触发跳转
 const SUCCESS_CODE = 0
 
 const instance = axios.create({
