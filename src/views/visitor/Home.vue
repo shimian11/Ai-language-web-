@@ -260,25 +260,25 @@ function resetFilters(): void {
 }
 
 .masonry {
-  column-count: 4;
-  column-gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
 }
 
 @media (max-width: 1100px) {
   .masonry {
-    column-count: 3;
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 780px) {
   .masonry {
-    column-count: 2;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 .masonry > * {
-  break-inside: avoid;
-  margin-bottom: 20px;
+  min-width: 0;
 }
 
 .pager {
