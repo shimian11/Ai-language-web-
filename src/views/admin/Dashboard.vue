@@ -50,7 +50,7 @@
             <tr v-for="item in overview?.recent ?? []" :key="item.id">
               <td>
                 <div class="e-title">
-                  <img :src="item.images[0]?.url ?? ''" alt="" />
+                  <Thumb :src="item.images[0]?.url ?? ''" :text="item.title" class="e-thumb" />
                   <span>
                     <b>{{ item.title }}</b>
                     <span class="cat">{{ item.categoryName }} · {{ item.style }}</span>
@@ -82,6 +82,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import Thumb from '@/components/common/Thumb.vue'
 import { getOverview } from '@/api/entry'
 
 import type { AdminOverview } from '@/api/entry'
@@ -237,10 +238,9 @@ tr:hover td {
   gap: 12px;
 }
 
-.e-title img {
+.e-title .e-thumb {
   width: 52px;
   height: 39px;
-  object-fit: cover;
   border-radius: 6px;
   border: 1px solid var(--line);
 }
