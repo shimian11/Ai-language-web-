@@ -28,66 +28,105 @@
 
     <div class="panel-wrap">
       <div class="panel">
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 38%">案例</th>
-              <th>状态</th>
-              <th class="hide-sm">浏览</th>
-              <th class="hide-sm">复制</th>
-              <th class="hide-sm">收录日期</th>
-              <th style="text-align: right">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in list" :key="item.id">
-              <td>
-                <div class="e-title">
-                  <img :src="item.images[0]?.url ?? ''" alt="" />
-                  <span>
-                    <b>{{ item.title }}</b>
-                    <span class="cat">{{ item.categoryName }} · {{ item.style }}</span>
+        <!-- 分组视图：按「设计大类-案例标题」统计 -->
+        <template v-if="view === 'groups'">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60%">案例分组</th>
+                <th>样式数</th>
+                <th class="hide-sm">状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="g in groups" :key="`${g.categoryId}:${g.title}`" class="grp-row" @click="openGroup(g)">
+                <td>
+                  <div class="e-title">
+                    <Thumb :src="g.cover ?? ''" :text="g.categoryName" class="e-thumb" />
+                    <span>
+                      <b>{{ g.categoryName }} - {{ g.title }}</b>
+                      <span class="cat">点击进入查看该组全部样式</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="num">{{ g.count }}</span></td>
+                <td class="hide-sm"><span class="hint">→</span></td>
+              </tr>
+              <tr v-if="!groups.length && !loading">
+                <td colspan="3" class="empty-cell">没有符合条件的案例分组</td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
+
+        <!-- 组内视图：该组各样式按「样式名称」命名 -->
+        <template v-else-if="activeGroup">
+          <div class="group-bar">
+            <button class="back" type="button" @click="backToGroups">← 返回分组列表</button>
+            <span class="gb-title">{{ activeGroup.categoryName }} - {{ activeGroup.title }}</span>
+            <span class="no">共 {{ total }} 个样式</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 38%">样式</th>
+                <th>状态</th>
+                <th class="hide-sm">浏览</th>
+                <th class="hide-sm">复制</th>
+                <th class="hide-sm">收录日期</th>
+                <th style="text-align: right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in list" :key="item.id">
+                <td>
+                  <div class="e-title">
+                    <Thumb :src="item.images[0]?.url ?? ''" :text="item.style" class="e-thumb" />
+                    <span>
+                      <b>{{ item.style }}</b>
+                      <span class="cat">{{ item.categoryName }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="st" :class="item.status === 'PUBLISHED' ? 'pub' : 'draft'">
+                    <i></i>{{ item.status === 'PUBLISHED' ? '已发布' : '草稿' }}
                   </span>
-                </div>
-              </td>
-              <td>
-                <span class="st" :class="item.status === 'PUBLISHED' ? 'pub' : 'draft'">
-                  <i></i>{{ item.status === 'PUBLISHED' ? '已发布' : '草稿' }}
-                </span>
-              </td>
-              <td class="num hide-sm">{{ item.viewCount ?? 0 }}</td>
-              <td class="num hide-sm">{{ item.copyCount ?? 0 }}</td>
-              <td class="date hide-sm">{{ item.publishedAt ?? item.createdAt }}</td>
-              <td>
-                <div class="ops">
-                  <a class="op" :href="`/entry/${item.id}`" target="_blank" rel="noopener">预览</a>
-                  <RouterLink
-                    class="op"
-                    :to="{ name: 'admin-entry-edit', params: { id: String(item.id) } }"
-                  >
-                    编辑
-                  </RouterLink>
-                  <button class="op pub" type="button" @click="onToggleStatus(item)">
-                    {{ item.status === 'PUBLISHED' ? '下架' : '发布' }}
-                  </button>
-                  <button class="op warn" type="button" @click="onRemove(item)">删除</button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!list.length && !loading">
-              <td colspan="6" class="empty-cell">没有符合条件的案例</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="foot">
-          <span>共 <b>{{ total }}</b> 条</span>
-          <AppPagination
-            v-model:page="page"
-            v-model:size="size"
-            :total="total"
-            @change="fetchList"
-          />
-        </div>
+                </td>
+                <td class="num hide-sm">{{ item.viewCount ?? 0 }}</td>
+                <td class="num hide-sm">{{ item.copyCount ?? 0 }}</td>
+                <td class="date hide-sm">{{ item.publishedAt ?? item.createdAt }}</td>
+                <td>
+                  <div class="ops">
+                    <a class="op" :href="`/entry/${item.id}`" target="_blank" rel="noopener">预览</a>
+                    <RouterLink
+                      class="op"
+                      :to="{ name: 'admin-entry-edit', params: { id: String(item.id) } }"
+                    >
+                      编辑
+                    </RouterLink>
+                    <button class="op pub" type="button" @click="onToggleStatus(item)">
+                      {{ item.status === 'PUBLISHED' ? '下架' : '发布' }}
+                    </button>
+                    <button class="op warn" type="button" @click="onRemove(item)">删除</button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="!list.length && !loading">
+                <td colspan="6" class="empty-cell">该组暂无案例</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="foot">
+            <span>共 <b>{{ total }}</b> 条</span>
+            <AppPagination
+              v-model:page="page"
+              v-model:size="size"
+              :total="total"
+              @change="fetchList"
+            />
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -99,9 +138,10 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 import AppPagination from '@/components/common/AppPagination.vue'
-import { pageEntries, removeEntry, updateEntryStatus } from '@/api/entry'
+import Thumb from '@/components/common/Thumb.vue'
+import { entryGroups, pageEntries, removeEntry, updateEntryStatus } from '@/api/entry'
 
-import type { Entry, EntryStatus } from '@/types'
+import type { Entry, EntryGroup, EntryStatus } from '@/types'
 
 const router = useRouter()
 
@@ -115,20 +155,39 @@ const statusTabs = ref([
 
 const statusFilter = ref<StatusFilter>('all')
 const keyword = ref('')
+const loading = ref(false)
+
+// 两级视图状态
+const view = ref<'groups' | 'items'>('groups')
+const groups = ref<EntryGroup[]>([])
+const activeGroup = ref<EntryGroup | null>(null)
 const list = ref<Entry[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(10)
-const loading = ref(false)
+
+const statusParam = (): EntryStatus | undefined =>
+  statusFilter.value === 'all' ? undefined : statusFilter.value
+
+async function fetchGroups(): Promise<void> {
+  loading.value = true
+  try {
+    groups.value = await entryGroups({ status: statusParam(), keyword: keyword.value || undefined })
+  } finally {
+    loading.value = false
+  }
+}
 
 async function fetchList(): Promise<void> {
+  if (!activeGroup.value) return
   loading.value = true
   try {
     const data = await pageEntries({
       page: page.value,
       size: size.value,
-      keyword: keyword.value || undefined,
-      status: statusFilter.value === 'all' ? undefined : statusFilter.value,
+      categoryId: activeGroup.value.categoryId,
+      title: activeGroup.value.title,
+      status: statusParam(),
     })
     list.value = data.list
     total.value = data.total
@@ -139,31 +198,47 @@ async function fetchList(): Promise<void> {
 
 async function fetchCounts(): Promise<void> {
   const [all, published, draft] = await Promise.all([
-    pageEntries({ page: 1, size: 1 }),
-    pageEntries({ page: 1, size: 1, status: 'PUBLISHED' }),
-    pageEntries({ page: 1, size: 1, status: 'DRAFT' }),
+    entryGroups({}),
+    entryGroups({ status: 'PUBLISHED' }),
+    entryGroups({ status: 'DRAFT' }),
   ])
-  statusTabs.value[0].count = all.total
-  statusTabs.value[1].count = published.total
-  statusTabs.value[2].count = draft.total
+  statusTabs.value[0].count = all.length
+  statusTabs.value[1].count = published.length
+  statusTabs.value[2].count = draft.length
+}
+
+function openGroup(g: EntryGroup): void {
+  activeGroup.value = g
+  page.value = 1
+  view.value = 'items'
+  fetchList()
+}
+
+function backToGroups(): void {
+  view.value = 'groups'
+  activeGroup.value = null
+  fetchGroups()
 }
 
 function onTabChange(value: StatusFilter): void {
   statusFilter.value = value
   page.value = 1
-  fetchList()
+  if (view.value === 'groups') fetchGroups()
+  else fetchList()
 }
 
 function onSearch(): void {
   page.value = 1
-  fetchList()
+  view.value = 'groups'
+  activeGroup.value = null
+  fetchGroups()
 }
 
 async function onToggleStatus(item: Entry): Promise<void> {
   const next: EntryStatus = item.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'
   await updateEntryStatus(item.id, next)
   ElMessage.success(next === 'PUBLISHED' ? '已发布' : '已转为草稿')
-  await Promise.all([fetchList(), fetchCounts()])
+  await fetchList()
 }
 
 async function onRemove(item: Entry): Promise<void> {
@@ -178,11 +253,11 @@ async function onRemove(item: Entry): Promise<void> {
   }
   await removeEntry(item.id)
   ElMessage.success('已删除')
-  await Promise.all([fetchList(), fetchCounts()])
+  await fetchList()
 }
 
 onMounted(() => {
-  fetchList()
+  fetchGroups()
   fetchCounts()
 })
 </script>
@@ -317,16 +392,19 @@ tr:hover td {
   background: #fcfaf6;
 }
 
+tr.grp-row {
+  cursor: pointer;
+}
+
 .e-title {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.e-title img {
+.e-title .e-thumb {
   width: 52px;
   height: 39px;
-  object-fit: cover;
   border-radius: 6px;
   border: 1px solid var(--line);
 }
@@ -342,6 +420,47 @@ tr:hover td {
   color: var(--ink-2);
   margin-top: 2px;
   display: block;
+}
+
+.hint {
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.group-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.group-bar .back {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.group-bar .back:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.group-bar .gb-title {
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.group-bar .no {
+  font-size: 12px;
+  color: var(--ink-2);
 }
 
 .st {
