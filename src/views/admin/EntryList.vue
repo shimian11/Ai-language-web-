@@ -42,9 +42,9 @@
               <tr v-for="g in groups" :key="`${g.categoryId}:${g.title}`" class="grp-row" @click="openGroup(g)">
                 <td>
                   <div class="e-title">
-                    <Thumb :src="g.cover ?? ''" :text="g.categoryName" class="e-thumb" />
+                    <Thumb :src="g.cover ?? ''" :text="g.categoryName || g.title" class="e-thumb" />
                     <span>
-                      <b>{{ g.categoryName }} - {{ g.title }}</b>
+                      <b>{{ g.categoryName ? `${g.categoryName} - ${g.title}` : g.title }}</b>
                       <span class="cat">点击进入查看该组全部样式</span>
                     </span>
                   </div>
@@ -63,7 +63,7 @@
         <template v-else-if="activeGroup">
           <div class="group-bar">
             <button class="back" type="button" @click="backToGroups">← 返回分组列表</button>
-            <span class="gb-title">{{ activeGroup.categoryName }} - {{ activeGroup.title }}</span>
+            <span class="gb-title">{{ activeGroup.categoryName ? `${activeGroup.categoryName} - ${activeGroup.title}` : activeGroup.title }}</span>
             <span class="no">共 {{ total }} 个样式</span>
           </div>
           <table>
@@ -84,7 +84,7 @@
                     <Thumb :src="item.images[0]?.url ?? ''" :text="item.style" class="e-thumb" />
                     <span>
                       <b>{{ item.style }}</b>
-                      <span class="cat">{{ item.categoryName }}</span>
+                      <span class="cat">{{ (item.tags ?? []).join(' / ') }}</span>
                     </span>
                   </div>
                 </td>
@@ -185,7 +185,8 @@ async function fetchList(): Promise<void> {
     const data = await pageEntries({
       page: page.value,
       size: size.value,
-      categoryId: activeGroup.value.categoryId,
+      // categoryId=0 表示未挂大类的组：不传该参数（仅按标题过滤）
+      categoryId: activeGroup.value.categoryId || undefined,
       title: activeGroup.value.title,
       status: statusParam(),
     })

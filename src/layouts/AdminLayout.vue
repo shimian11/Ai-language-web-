@@ -44,13 +44,6 @@
         >
           ◈ 面试管理
         </RouterLink>
-        <RouterLink
-          class="side-item"
-          :class="{ on: route.name === 'admin-categories' }"
-          to="/admin/categories"
-        >
-          ▣ 分类管理
-        </RouterLink>
         <div class="side-divider"></div>
         <RouterLink class="side-item" to="/">↗ 返回前台</RouterLink>
         <RouterLink class="side-item" to="/favorites">★ 我的收藏</RouterLink>

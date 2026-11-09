@@ -36,6 +36,8 @@ export interface ArticleSavePayload {
   summary?: string
   /** 正文 Markdown */
   body?: string
+  /** 封面图 URL（MinIO objectUrl，可空） */
+  cover?: string
   tags?: string[]
   /** 实习记录所属公司 key */
   companyKey?: string

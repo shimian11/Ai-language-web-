@@ -17,13 +17,13 @@
         <div class="crumbs">
           <RouterLink to="/">首页</RouterLink><span>/</span>
           <RouterLink to="/prompts">提示词</RouterLink><span>/</span>
-          <RouterLink to="/prompts">{{ entry.categoryName }}</RouterLink><span>/</span>
+          <RouterLink :to="{ path: '/prompts', query: { tag: primaryTag } }">{{ primaryTag }}</RouterLink><span>/</span>
           <b>{{ entry.style }}</b>
         </div>
 
         <!-- 头部：标题 + 收藏按钮同行 -->
         <div class="article-head" style="border: 0; padding-top: 0; margin-bottom: 14px">
-          <div class="kicker">{{ entry.categoryName }} · {{ entry.style }}</div>
+          <div class="kicker">{{ primaryTag }} · {{ entry.style }}</div>
           <div class="title-row">
             <h1 class="article-title">{{ entry.title }}</h1>
             <button
@@ -93,7 +93,7 @@
             <div class="panel aside-panel">
               <div class="panel-title">案例信息</div>
               <div class="panel-body">
-                <div class="info-row"><span class="k">所属分类</span><span class="v">{{ entry.categoryName }}</span></div>
+                <div class="info-row"><span class="k">所属标签</span><span class="v">{{ entry.tags.join(' / ') || '未标注' }}</span></div>
                 <div class="info-row"><span class="k">具体样式</span><span class="v">{{ entry.style }}</span></div>
                 <div class="info-row">
                   <span class="k">HTML 源码</span>
@@ -106,7 +106,7 @@
             <div v-if="related.length" class="panel aside-panel">
               <div class="panel-title">
                 同类提示词
-                <span class="no">同属「{{ entry.categoryName }}」</span>
+                <span class="no">共享「{{ primaryTag }}」标签</span>
               </div>
               <div class="panel-body">
                 <div class="rel">
@@ -119,7 +119,7 @@
                     <Thumb :src="item.images[0]?.url ?? ''" :text="item.title" class="rel-thumb" />
                     <div>
                       <div class="t">{{ item.title }}</div>
-                      <div class="c">{{ item.categoryName }} · {{ item.style }}</div>
+                      <div class="c">{{ item.tags.slice(0, 2).join(' / ') || item.style }} · {{ item.style }}</div>
                     </div>
                   </RouterLink>
                 </div>
@@ -165,6 +165,10 @@ const activeImageIndex = ref(0)
 const { has: hasFav, toggle: toggleFavItem } = useFavorites()
 
 const entryId = computed(() => Number(route.params.id))
+/** 主标签：标签即分类后的分组名（历史数据回退大类名） */
+const primaryTag = computed(() =>
+  entry.value?.tags[0] || entry.value?.categoryName || '提示词',
+)
 /** 收藏状态（type=提示词，与收藏页共用存储） */
 const isFav = computed(() => entry.value !== null && hasFav('prompt', String(entry.value.id)))
 const activeImage = computed(
@@ -205,8 +209,9 @@ function toggleFav(): void {
     type: 'prompt',
     id: String(e.id),
     title: e.title,
-    cat: `${e.categoryName ?? '提示词'} · ${e.style}`,
+    cat: `${primaryTag.value} · ${e.style}`,
     desc: e.summary,
+    cover: e.images[0]?.url,
   })
   showToast(added ? '已收藏，可在收藏页查看' : '已取消收藏')
 }

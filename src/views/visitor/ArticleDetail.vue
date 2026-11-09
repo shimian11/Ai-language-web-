@@ -125,6 +125,7 @@ function onFav(): void {
     title: a.title,
     cat: a.sub,
     desc: a.summary,
+    cover: a.cover || undefined,
   })
   showToast(added ? '已收藏，可在收藏页查看' : '已取消收藏')
 }

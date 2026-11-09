@@ -43,6 +43,8 @@
           <RouterLink :to="linkOf(item)" style="display: block; color: inherit; text-decoration: none">
             <div class="thumb">
               <div class="art-grid"></div>
+              <!-- 有封面用真实图，否则回落 CSS 示意图 -->
+              <img v-if="item.cover" class="cover-img" :src="item.cover" alt="封面" loading="lazy" />
             </div>
             <div class="card-body">
               <div class="card-cat">
@@ -108,7 +110,6 @@ const visible = computed(() =>
 function linkOf(item: FavItem): string {
   return `${typeMeta[item.type].list}/${item.id}`
 }
-
 /** Toast */
 const toast = ref('')
 const toastShow = ref(false)
@@ -149,3 +150,14 @@ function restoreDemo(): void {
   showToast('已恢复示例收藏')
 }
 </script>
+
+<style scoped>
+.cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+}
+</style>

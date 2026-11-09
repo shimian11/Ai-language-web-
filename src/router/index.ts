@@ -51,11 +51,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue') },
       { path: 'entries', name: 'admin-entry-list', component: () => import('@/views/admin/EntryList.vue') },
-      {
-        path: 'categories',
-        name: 'admin-categories',
-        component: () => import('@/views/admin/CategoryManage.vue'),
-      },
+      // 标签即分类后下线大类管理页；旧书签跳转回提示词管理
+      { path: 'categories', redirect: { name: 'admin-entry-list' } },
       // 文章管理：心得 / 面试共用列表组件（props 区分类型），实习按公司折叠分组
       {
         path: 'notes',

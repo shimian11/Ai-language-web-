@@ -12,16 +12,16 @@
 
     <section v-if="overview" class="stats">
       <div class="stat hl">
-        <div class="k">已发布案例</div>
+        <div class="k">提示词</div>
         <div class="v">{{ overview.published }}<em>个</em></div>
       </div>
       <div class="stat">
-        <div class="k">草稿箱</div>
-        <div class="v">{{ overview.drafts }}<em>个</em></div>
+        <div class="k">文章</div>
+        <div class="v">{{ overview.articleTotal }}<em>篇</em></div>
       </div>
       <div class="stat">
-        <div class="k">设计大类</div>
-        <div class="v">{{ overview.categories }}<em>个</em></div>
+        <div class="k">草稿</div>
+        <div class="v">{{ overview.drafts + overview.articleDrafts }}<em>项</em></div>
       </div>
       <div class="stat">
         <div class="k">累计浏览</div>
@@ -53,7 +53,7 @@
                   <Thumb :src="item.images[0]?.url ?? ''" :text="item.title" class="e-thumb" />
                   <span>
                     <b>{{ item.title }}</b>
-                    <span class="cat">{{ item.categoryName }} · {{ item.style }}</span>
+                    <span class="cat">{{ (item.tags ?? []).join(' / ') }} · {{ item.style }}</span>
                   </span>
                 </div>
               </td>
@@ -74,6 +74,49 @@
           </tbody>
         </table>
       </div>
+
+      <div class="panel" style="margin-top: 20px">
+        <div class="panel-head">
+          <h2>最近文章</h2>
+          <span class="hint-line">心得 / 实习 / 面试</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 52%">文章</th>
+              <th>栏目</th>
+              <th>状态</th>
+              <th class="hide-sm">日期</th>
+              <th style="text-align: right">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in overview?.recentArticles ?? []" :key="`a${a.id}`">
+              <td><b>{{ a.title }}</b></td>
+              <td>{{ a.sub || typeLabel(a.type) }}</td>
+              <td>
+                <span class="st" :class="a.status === 'PUBLISHED' ? 'pub' : 'draft'">
+                  <i></i>{{ a.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+                </span>
+              </td>
+              <td class="date hide-sm">{{ a.date || '—' }}</td>
+              <td>
+                <div class="ops">
+                  <RouterLink
+                    class="op"
+                    :to="{ name: 'admin-article-edit', params: { id: String(a.id) }, query: { type: a.type } }"
+                  >
+                    编辑
+                  </RouterLink>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!(overview?.recentArticles ?? []).length">
+              <td colspan="5" class="empty-cell">还没有文章</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -83,12 +126,19 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import Thumb from '@/components/common/Thumb.vue'
+import { ARTICLE_TYPE_META } from '@/config/article'
 import { getOverview } from '@/api/entry'
 
 import type { AdminOverview } from '@/api/entry'
+import type { ArticleType } from '@/types'
 
 const router = useRouter()
 const overview = ref<AdminOverview | null>(null)
+
+/** 文章类型显示名（栏目为空时回退） */
+function typeLabel(type: ArticleType): string {
+  return ARTICLE_TYPE_META[type].label
+}
 
 function formatViews(value: number): string {
   return value >= 10000 ? `${Math.round(value / 1000) / 10}万` : String(value)
@@ -276,6 +326,29 @@ tr:hover td {
   height: 6px;
   border-radius: 50%;
   background: #2f9e44;
+}
+
+/* 草稿态徽标（最近文章表用） */
+.st.draft {
+  color: var(--ink-2);
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+.st.draft i {
+  background: #cfc9bd;
+}
+
+/* 面板头说明文字 */
+.hint-line {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.empty-cell {
+  text-align: center;
+  color: var(--ink-2);
+  padding: 40px 0;
 }
 
 .num {

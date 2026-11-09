@@ -76,7 +76,7 @@
             </div>
           </div>
           <div class="card-body">
-            <div class="card-cat">{{ entry.categoryName || '提示词' }} · {{ entry.style }}</div>
+            <div class="card-cat">{{ entry.tags[0] || '提示词' }} · {{ entry.style }}</div>
             <div class="card-title">{{ entry.title }}</div>
             <div class="card-desc">{{ entry.summary }}</div>
             <div class="tags">
@@ -112,7 +112,7 @@ import { computed, onMounted, ref } from 'vue'
 import { pageEntries } from '@/api/entry'
 import type { Entry } from '@/types'
 
-/** 全量已发布条目（个人站量级一次取回，前端完成标签/搜索/排序；P2 后端补 tags 过滤后可改分页） */
+/** 全量已发布条目（个人站量级一次取回；标签自动聚合与搜索在前端完成，后端同时提供 tag 精确筛选供大数量级使用） */
 const entries = ref<Entry[]>([])
 const loading = ref(true)
 

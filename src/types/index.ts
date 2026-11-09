@@ -28,7 +28,7 @@ export interface EntryImage {
   isMain: boolean
 }
 
-/** 后台分组视图：按 (设计大类, 案例标题) 聚合的一组 */
+/** 后台分组视图：按 (设计大类, 案例标题) 聚合的一组（大类已废弃必填，未挂大类的组 id 为 0） */
 export interface EntryGroup {
   categoryId: number
   categoryName: string
@@ -41,7 +41,8 @@ export interface Entry {
   id: number
   title: string
   summary: string
-  categoryId: number
+  /** 已废弃必填（标签即分类）；历史数据保留，新数据可为空 */
+  categoryId?: number
   categoryName?: string
   platform?: Platform
   style: string
@@ -80,6 +81,8 @@ export interface Article {
   summary: string
   /** 正文 Markdown（内联 HTML 亦为合法 Markdown），前端用 marked 渲染 */
   body: string
+  /** 封面图 URL（可空；后台编辑器 MinIO 直传） */
+  cover?: string
   tags: string[]
   /** 实习记录：所属公司 key（= company.key）；其余为空 */
   company?: string
@@ -119,4 +122,6 @@ export interface FavItem {
   /** 归属标注（如「首屏 · 左对齐」「AI 使用」「某创业公司」） */
   cat: string
   desc: string
+  /** 封面图 URL（可空） */
+  cover?: string
 }

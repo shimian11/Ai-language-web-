@@ -32,55 +32,35 @@
               <label>简介说明 <span class="tip">一句话讲清这组样式想表达什么</span></label>
               <textarea v-model="form.summary" class="textarea" rows="2"></textarea>
             </div>
-            <div class="row2">
-              <div class="field">
-                <label>设计大类 <span class="req">*</span></label>
-                <select class="select" :value="categoryKey" @change="onCategoryChange">
-                  <option value="" disabled>请选择</option>
-                  <option v-for="c in categoryStore.list" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-                  <option value="__new">＋ 新建大类…</option>
-                </select>
-                <div v-if="showNewCategory" class="new-inline">
-                  <input
-                    ref="newCategoryInputRef"
-                    v-model="newCategoryName"
-                    class="input"
-                    placeholder="输入新大类名称，如：登录页"
-                    @keydown.enter="confirmNewCategory"
-                  />
-                  <button class="btn" type="button" @click="confirmNewCategory">确认</button>
-                </div>
-              </div>
-              <div class="field">
-                <label>适用平台</label>
-                <select v-model="form.platform" class="select">
-                  <option value="web">Web 网页端</option>
-                  <option value="app">App 应用端</option>
-                  <option value="general">通用</option>
-                </select>
-              </div>
-            </div>
             <div class="field">
-              <label>标签</label>
+              <label>标签 <span class="req">*</span> <span class="tip">标签即分类：前台筛选条由标签自动聚合，无需维护大类</span></label>
               <input
                 v-model="tagInput"
                 class="input"
                 type="text"
-                placeholder="回车确认，多个用逗号分隔"
+                placeholder="输入中文标签后按回车，至少 1 个（如：对齐方式）"
                 @keydown.enter.prevent="addTag"
               />
               <div v-if="form.tags.length" class="tagbox">
                 <span v-for="tag in form.tags" :key="tag" class="tag">{{ tag }}<button @click="removeTag(tag)">✕</button></span>
               </div>
             </div>
+            <div class="field">
+              <label>适用平台</label>
+              <select v-model="form.platform" class="select">
+                <option value="web">Web 网页端</option>
+                <option value="app">App 应用端</option>
+                <option value="general">通用</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div class="panel">
-          <div class="panel-title">案例列表 <span class="no">每页 = 一个独立案例 · 共享标题 / 简介 / 大类</span></div>
+          <div class="panel-title">案例列表 <span class="no">每页 = 一个独立案例 · 共享标题 / 简介 / 标签</span></div>
           <div class="style-head">
             <div class="cap">
-              同一大类下可同时录入多个独立案例：案例 1「左对齐」、案例 2「右对齐」……每个案例各自编辑 HTML、图片与提示词；切换分页或点「＋」新增案例，顶部共享信息（标题 / 简介 / 大类）保持不变。
+              同一标签组下可同时录入多个独立案例：案例 1「左对齐」、案例 2「右对齐」……每个案例各自编辑 HTML、图片与提示词；切换分页或点「＋」新增案例，顶部共享信息（标题 / 简介 / 标签）保持不变。
             </div>
             <div class="pager">
               <button
@@ -202,10 +182,10 @@
 
         <div class="help">
           <b>多案例说明（本组）</b><br />
-          · 顶部<b>共享信息</b>（标题 / 简介 / 大类 / 平台 / 标签）填一次<br />
+          · 顶部<b>共享信息</b>（标题 / 简介 / 标签 / 平台）填一次<br />
           · 下方<b>每个分页 = 一个独立案例</b>，各自编辑<i>样式名 / 推荐场景 / 提示词 / 效果图 / HTML</i><br />
           · 「＋」新增案例，分页切换即切换到对该案例的编辑<br />
-          · 保存时每个案例各创建一条记录（共享标题 / 简介 / 大类）<br /><br />
+          · 保存时每个案例各创建一条记录（共享标题 / 简介 / 标签）<br /><br />
           <b>状态（仅两态）</b><br />
           <i>草稿</i> → 编辑中，仅自己可见<br />
           <i>已发布</i> → 首页与详情页可展示
@@ -216,11 +196,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createEntry, getEntry, updateEntry } from '@/api/entry'
-import { useCategoryStore } from '@/stores/category'
 import type { Entry, EntryStatus, EntryImage, Platform } from '@/types'
 
 const FALLBACK_HTML =
@@ -246,7 +225,6 @@ interface CasePage {
 
 const route = useRoute()
 const router = useRouter()
-const categoryStore = useCategoryStore()
 
 const entryId = computed(() => (route.params.id ? Number(route.params.id) : undefined))
 const isEdit = computed(() => entryId.value !== undefined)
@@ -257,6 +235,7 @@ const saving = ref(false)
 const form = reactive({
   title: '',
   summary: '',
+  /** 已废弃必填：编辑历史数据时保留原值，新数据不传 */
   categoryId: undefined as number | undefined,
   platform: 'general' as Platform,
   tags: [] as string[],
@@ -265,11 +244,7 @@ const form = reactive({
 const pages = ref<CasePage[]>([newPage()])
 const activeIndex = ref(0)
 
-const categoryKey = ref('')
 const tagInput = ref('')
-const showNewCategory = ref(false)
-const newCategoryName = ref('')
-const newCategoryInputRef = ref()
 const fileInputs = ref<HTMLInputElement[]>([])
 
 const displayValid = computed(() => {
@@ -308,29 +283,6 @@ function addTag(): void {
 
 function removeTag(tag: string): void {
   form.tags = form.tags.filter((t) => t !== tag)
-}
-
-function onCategoryChange(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value
-  if (value === '__new') {
-    form.categoryId = undefined
-    showNewCategory.value = true
-    nextTick(() => newCategoryInputRef.value?.focus?.())
-  } else {
-    form.categoryId = Number(value)
-    showNewCategory.value = false
-  }
-}
-
-async function confirmNewCategory(): Promise<void> {
-  const name = newCategoryName.value.trim()
-  if (!name) return
-  const created = await categoryStore.addCategory(name)
-  form.categoryId = created.id
-  categoryKey.value = String(created.id)
-  showNewCategory.value = false
-  newCategoryName.value = ''
-  ElMessage.success(`已创建大类「${name}」`)
 }
 
 function toggleStatus(): void {
@@ -379,8 +331,9 @@ function validate(): boolean {
     ElMessage.warning('请填写案例标题')
     return false
   }
-  if (form.categoryId === undefined) {
-    ElMessage.warning('请选择设计大类')
+  // 标签即分类：至少 1 个
+  if (!form.tags.length) {
+    ElMessage.warning('请至少添加 1 个标签')
     return false
   }
   if (pages.value.length === 0) {
@@ -459,12 +412,10 @@ async function unpublish(): Promise<void> {
 }
 
 onMounted(async () => {
-  if (!categoryStore.list.length) await categoryStore.fetchCategories()
   if (isEdit.value) {
     const entry = await getEntry(entryId.value as number)
     form.title = entry.title
     form.categoryId = entry.categoryId
-    categoryKey.value = String(entry.categoryId)
     form.platform = entry.platform || 'general'
     form.tags = [...entry.tags]
     status.value = entry.status

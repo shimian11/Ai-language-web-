@@ -17,20 +17,34 @@ import type { Entry, EntryGroup, EntryStatus, PageResult, Platform } from '@/typ
 export interface EntryPageParams {
   page: number
   size: number
+  /** 已废弃必填（标签即分类）；分组二级列表仍按 categoryId+title 过滤 */
   categoryId?: number
   platform?: Platform
   title?: string
   style?: string
   keyword?: string
+  /** 标签精确筛选（后端逗号锚定匹配） */
+  tag?: string
   status?: EntryStatus
 }
 
 export interface AdminOverview {
   published: number
   drafts: number
-  categories: number
+  /** 文章总数（心得/实习/面试） */
+  articleTotal: number
+  /** 文章草稿数 */
+  articleDrafts: number
   totalViews: number
   recent: Entry[]
+  recentArticles: Array<{
+    id: number
+    type: 'note' | 'internship' | 'interview'
+    sub: string
+    title: string
+    status: 'DRAFT' | 'PUBLISHED'
+    date: string
+  }>
 }
 
 export function pageEntries(params: EntryPageParams): Promise<PageResult<Entry>> {

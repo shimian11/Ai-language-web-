@@ -159,6 +159,28 @@
               </div>
             </div>
           </section>
+
+          <!-- 封面图：MinIO 预签名直传 -->
+          <section class="ae-panel">
+            <div class="ae-panel-head"><span class="ae-panel-title">封面图（可选）</span></div>
+            <div class="ae-panel-body">
+              <div class="ae-dropzone" @click="pickCover">
+                <img v-if="form.cover" :src="form.cover" alt="封面预览" class="ae-cover-img" />
+                <span v-else>点击上传封面图（jpg / png / webp，≤5MB）</span>
+              </div>
+              <input
+                ref="coverInputRef"
+                class="ae-hidden"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                @change="onCoverChange"
+              />
+              <div v-if="form.cover" class="ae-cover-ops">
+                <button type="button" class="ae-tab" @click="pickCover">更换</button>
+                <button type="button" class="ae-tab" @click="form.cover = ''">移除</button>
+              </div>
+            </div>
+          </section>
         </div>
 
         <!-- 右侧：发布设置 -->
@@ -223,6 +245,7 @@ import {
   updateArticle,
   updateArticleStatus,
 } from '@/api/article'
+import { uploadImage } from '@/api/upload'
 import type { ArticleSavePayload, CompanyItem } from '@/api/article'
 import { ARTICLE_TOPICS, ARTICLE_TYPE_META, INTERVIEW_RESULTS, topicLabel } from '@/config/article'
 import { renderMarkdown } from '@/utils/markdown'
@@ -243,6 +266,8 @@ const form = reactive({
   title: '',
   summary: '',
   body: '',
+  /** 封面图 URL（MinIO objectUrl） */
+  cover: '',
   tags: [] as string[],
   companyKey: '',
   displayDate: '',
@@ -262,6 +287,8 @@ const mdTab = ref<'edit' | 'preview'>('edit')
 const publishOn = ref(true)
 const loading = ref(true)
 const saving = ref(false)
+const coverUploading = ref(false)
+const coverInputRef = ref<HTMLInputElement>()
 
 /** 表单回填期间跳过栏目联动清空 */
 let hydrating = false
@@ -291,6 +318,35 @@ function addTag(): void {
 }
 function removeTag(t: string): void {
   form.tags = form.tags.filter((x) => x !== t)
+}
+
+/** 封面：走 MinIO 预签名直传（与提示词效果图同一条链路） */
+function pickCover(): void {
+  coverInputRef.value?.click()
+}
+async function onCoverChange(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    ElMessage.error('封面仅支持 jpg / png / webp')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('封面图片超过 5MB 限制')
+    return
+  }
+  coverUploading.value = true
+  try {
+    const result = await uploadImage(file)
+    form.cover = result.url
+    ElMessage.success('封面已上传')
+  } catch {
+    // 错误提示由 request.ts / 网络层承担
+  } finally {
+    coverUploading.value = false
+  }
 }
 
 /** 实习：选择「新建公司」时弹窗录入别名 */
@@ -338,6 +394,7 @@ async function init(): Promise<void> {
       form.title = a.title
       form.summary = a.summary
       form.body = a.body
+      form.cover = a.cover ?? ''
       form.tags = [...a.tags]
       form.companyKey = a.company ?? ''
       form.displayDate = a.date
@@ -373,6 +430,7 @@ function buildPayload(): ArticleSavePayload {
     title: form.title.trim(),
     summary: form.summary.trim(),
     body: form.body,
+    cover: form.cover.trim(),
     tags: form.tags,
     companyKey: form.type === 'internship' ? form.companyKey || undefined : undefined,
     displayDate: form.displayDate.trim(),
@@ -386,6 +444,10 @@ function buildPayload(): ArticleSavePayload {
 async function save(target: EntryStatus): Promise<void> {
   if (!form.title.trim()) {
     ElMessage.warning('请先填写标题')
+    return
+  }
+  if (coverUploading.value) {
+    ElMessage.warning('封面正在上传，请稍候')
     return
   }
   if (form.type === 'internship' && !form.displayDate.trim()) {
@@ -751,6 +813,38 @@ onMounted(init)
   padding: 60px 0;
   text-align: center;
   color: var(--ink-2);
+}
+
+/* 封面上传 */
+.ae-hidden {
+  display: none;
+}
+.ae-dropzone {
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.ae-dropzone:hover {
+  border-color: var(--red);
+}
+.ae-cover-img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+}
+.ae-cover-ops {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 @media (max-width: 1020px) {

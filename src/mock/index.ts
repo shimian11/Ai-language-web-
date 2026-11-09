@@ -14,9 +14,13 @@ interface MockPageParams {
 export interface MockOverview {
   published: number
   drafts: number
-  categories: number
+  /** 文章统计（mock 无文章数据，恒为 0） */
+  articleTotal: number
+  articleDrafts: number
   totalViews: number
   recent: Entry[]
+  /** mock 无文章数据，恒为空数组 */
+  recentArticles: never[]
 }
 
 const delay = <T>(data: T, ms = 250): Promise<T> =>
@@ -301,11 +305,11 @@ export function mockEntryGroups(params: { status?: MockEntryStatus; keyword?: st
   if (params.keyword) list = list.filter((entry) => entry.title.toLowerCase().includes(params.keyword!.toLowerCase()))
   const map = new Map<string, EntryGroup>()
   for (const entry of list) {
-    const key = `${entry.categoryId}::${entry.title}`
+    const key = `${entry.categoryId ?? 0}::${entry.title}`
     if (!map.has(key)) {
       map.set(key, {
-        categoryId: entry.categoryId,
-        categoryName: categoryNameOf(entry.categoryId),
+        categoryId: entry.categoryId ?? 0,
+        categoryName: categoryNameOf(entry.categoryId ?? 0),
         title: entry.title,
         count: 0,
         cover: entry.images[0]?.url,
@@ -355,7 +359,7 @@ export function mockUpdateEntry(id: number, data: Partial<Entry>): Promise<void>
     entry.status = status
     if (status === 'PUBLISHED' && !entry.publishedAt) entry.publishedAt = today()
   }
-  entry.categoryName = categoryNameOf(entry.categoryId)
+  entry.categoryName = categoryNameOf(entry.categoryId ?? 0)
   syncCategoryMeta()
   return delay(undefined)
 }
@@ -399,8 +403,10 @@ export function mockOverview(): Promise<MockOverview> {
   return delay({
     published: published.length,
     drafts: rawEntries.length - published.length,
-    categories: mockCategories.length,
+    articleTotal: 0,
+    articleDrafts: 0,
     totalViews: rawEntries.reduce((sum, entry) => sum + (entry.viewCount ?? 0), 0),
     recent,
+    recentArticles: [],
   })
 }
