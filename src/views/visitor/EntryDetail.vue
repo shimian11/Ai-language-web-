@@ -23,7 +23,7 @@
 
       <div class="head">
         <div>
-          <h1>{{ entry.title }}</h1>
+          <h1>{{ entry.title }}<span class="style-tag">（{{ entry.style }}）</span></h1>
           <div class="head-meta">
             <span class="meta-pill">{{ entry.publishedAt || entry.createdAt }} 收录</span>
             <span class="meta-pill">👁 {{ entry.viewCount ?? 0 }} 次浏览</span>
@@ -224,6 +224,13 @@ h1 {
   line-height: 1.35;
   font-weight: 700;
   max-width: 760px;
+}
+
+h1 .style-tag {
+  color: var(--ink-2);
+  font-weight: 500;
+  font-size: 22px;
+  white-space: nowrap;
 }
 
 .head-meta {

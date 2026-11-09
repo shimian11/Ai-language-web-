@@ -12,8 +12,8 @@
       <span v-if="entry.htmlSource" class="badge"><i></i>HTML 实时渲染</span>
     </div>
     <div class="card-body">
-      <div class="cat">{{ entry.categoryName }} · {{ entry.style }}</div>
-      <div class="title">{{ entry.title }}</div>
+      <div class="cat">{{ entry.title }}</div>
+      <div class="title">{{ entry.categoryName }} · {{ entry.style }}</div>
       <div class="desc">{{ entry.summary }}</div>
       <div v-if="entry.tags.length" class="tags">
         <span v-for="tag in entry.tags" :key="tag" class="tag">{{ tag }}</span>
