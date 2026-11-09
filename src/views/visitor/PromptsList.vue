@@ -76,7 +76,7 @@
             </div>
           </div>
           <div class="card-body">
-            <div class="card-cat">{{ entry.tags[0] || '提示词' }} · {{ entry.style }}</div>
+            <div class="card-cat">{{ catLabel(entry) }}</div>
             <div class="card-title">{{ entry.title }}</div>
             <div class="card-desc">{{ entry.summary }}</div>
             <div class="tags">
@@ -172,6 +172,12 @@ const visible = computed<Entry[]>(() => {
       return sortDir.value === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
     })
 })
+
+/** 卡片归属标注：主标签与样式名相同时不重复显示（标签即分类迁移后大类并入标签会出现同名） */
+function catLabel(entry: Entry): string {
+  const tag = entry.tags[0] || '提示词'
+  return tag === entry.style ? tag : `${tag} · ${entry.style}`
+}
 
 /** 点卡片上的标签 = 直接按该标签筛选并展开更多 */
 function selectTag(tag: string): void {
