@@ -52,7 +52,8 @@ const IMG = {
     'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=UI%20design%20mockup%20of%20a%20light%20data%20screen%20with%20top%20summary%20bar%20and%20bottom%20detail%20panels%2C%20top-down%20hierarchy%2C%20blue%20accent%20color&image_size=landscape_4_3',
 }
 
-export const mockCategories: Category[] = [
+/** mock 内部用的大类名表（仅给 categoryNameOf 回填历史数据的 categoryName；非公开导出） */
+const mockCategories: Category[] = [
   { id: 1, name: '大屏设计', sort: 1 },
   { id: 2, name: '轮播', sort: 2 },
   { id: 3, name: '落地页', sort: 3 },
@@ -214,57 +215,10 @@ const rawEntries: Entry[] = [
 ]
 
 let nextEntryId = 100
-let nextCategoryId = 100
 
-function syncCategoryMeta(): void {
-  for (const category of mockCategories) {
-    category.entryCount = rawEntries.filter((entry) => entry.categoryId === category.id).length
-  }
-  mockCategories.sort((a, b) => a.sort - b.sort)
-}
-syncCategoryMeta()
-
+/** 由 mock 数据内的大类 id 取显示名（仅历史数据回填 categoryName 用；分类管理已下线） */
 function categoryNameOf(id: number): string {
   return mockCategories.find((category) => category.id === id)?.name ?? ''
-}
-
-export function mockListCategories(): Promise<Category[]> {
-  syncCategoryMeta()
-  return delay(mockCategories.map((category) => ({ ...category })))
-}
-
-export function mockCreateCategory(name: string): Promise<Category> {
-  const created: Category = { id: nextCategoryId++, name, sort: mockCategories.length + 1 }
-  mockCategories.push(created)
-  return delay({ ...created })
-}
-
-export function mockUpdateCategory(id: number, name: string): Promise<void> {
-  const category = mockCategories.find((item) => item.id === id)
-  if (!category) return Promise.reject(new Error('分类不存在'))
-  category.name = name
-  for (const entry of rawEntries) {
-    if (entry.categoryId === id) entry.categoryName = name
-  }
-  return delay(undefined)
-}
-
-export function mockSortCategories(ids: number[]): Promise<void> {
-  ids.forEach((id, index) => {
-    const category = mockCategories.find((item) => item.id === id)
-    if (category) category.sort = index + 1
-  })
-  mockCategories.sort((a, b) => a.sort - b.sort)
-  return delay(undefined)
-}
-
-export function mockRemoveCategory(id: number): Promise<void> {
-  const index = mockCategories.findIndex((item) => item.id === id)
-  if (index === -1) return Promise.reject(new Error('分类不存在'))
-  const count = rawEntries.filter((entry) => entry.categoryId === id).length
-  if (count > 0) return Promise.reject(new Error(`该分类下还有 ${count} 个案例，无法删除`))
-  mockCategories.splice(index, 1)
-  return delay(undefined)
 }
 
 export function mockPageEntries(params: MockPageParams): Promise<PageResult<Entry>> {
@@ -346,7 +300,6 @@ export function mockCreateEntry(data: Partial<Entry>): Promise<Entry> {
     copyCount: 0,
   }
   rawEntries.unshift(entry)
-  syncCategoryMeta()
   return delay({ ...entry })
 }
 
@@ -360,7 +313,6 @@ export function mockUpdateEntry(id: number, data: Partial<Entry>): Promise<void>
     if (status === 'PUBLISHED' && !entry.publishedAt) entry.publishedAt = today()
   }
   entry.categoryName = categoryNameOf(entry.categoryId ?? 0)
-  syncCategoryMeta()
   return delay(undefined)
 }
 
@@ -376,7 +328,6 @@ export function mockRemoveEntry(id: number): Promise<void> {
   const index = rawEntries.findIndex((item) => item.id === id)
   if (index === -1) return Promise.reject(new Error('案例不存在'))
   rawEntries.splice(index, 1)
-  syncCategoryMeta()
   return delay(undefined)
 }
 
@@ -394,7 +345,6 @@ export function mockRelated(id: number): Promise<Entry[]> {
 }
 
 export function mockOverview(): Promise<MockOverview> {
-  syncCategoryMeta()
   const published = rawEntries.filter((entry) => entry.status === 'PUBLISHED')
   const recent = [...published]
     .sort((a, b) => (b.publishedAt ?? b.createdAt).localeCompare(a.publishedAt ?? a.createdAt))

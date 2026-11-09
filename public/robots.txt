@@ -1,0 +1,5 @@
+# 允许全部搜索引擎收录；后台与接口路径不暴露给爬虫
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
