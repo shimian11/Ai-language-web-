@@ -1,9 +1,38 @@
+# ============================================================
+# web 仓库 .gitignore —— 敏感内容红线
+# 原则：真实密钥/密码/私钥永不入库
+# 说明：.env.development / .env.production 只含非敏感的构建开关
+#       （VITE_API_BASE、VITE_USE_MOCK），需要入库保证开箱即用；
+#       其余 env 文件一律忽略
+# ============================================================
+
+# ---- 依赖与构建产物 ----
 node_modules/
 dist/
 dist-ssr/
+
+# ---- 环境变量：默认忽略，仅放行上述两个非敏感文件 ----
 .env
+.env.*
+!.env.development
+!.env.production
+
+# ---- 密钥与证书（任何形态都不入库）----
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+*.pfx
+
+# ---- 本地覆盖与临时文件 ----
 *.local
+*.log
+logs/
+
+# ---- IDE / 系统 ----
+.idea/
+*.iml
+.vscode/
 .DS_Store
 Thumbs.db
-.idea/
-*.log
