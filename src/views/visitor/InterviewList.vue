@@ -40,8 +40,15 @@
         </div>
       </div>
 
+      <!-- 加载态 / 错误态 -->
+      <div v-if="loading" class="empty"><p>正在加载…</p></div>
+      <div v-else-if="error" class="empty">
+        <p>{{ error }}</p>
+        <button class="btn" type="button" @click="load">重新加载</button>
+      </div>
+
       <!-- 当前栏目列表 -->
-      <div v-if="visible.length" class="list">
+      <div v-else-if="visible.length" class="list">
         <RouterLink
           v-for="a in visible"
           :key="a.id"
@@ -53,9 +60,9 @@
             <span class="list-title">{{ a.title }}</span>
             <span class="list-desc">{{ a.summary }}</span>
           </span>
-          <!-- 面经显示结果徽标；八股/算法显示难度/频次 -->
+          <!-- 结果徽标：面经显示通过/未通过；八股/算法显示难度或频次 -->
           <span class="list-meta">
-            <span class="badge" :class="a.resultClass ?? 'ok'">{{ a.result }}</span>
+            <span v-if="a.result" class="badge" :class="a.resultClass || 'ok'">{{ a.result }}</span>
           </span>
         </RouterLink>
       </div>
@@ -68,10 +75,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-import { listPublished } from '@/mocks/articles'
-import type { ArticleTopic } from '@/types'
+import { listPublishedArticles } from '@/api/article'
+import type { Article, ArticleTopic } from '@/types'
 
 /** 栏目定义 */
 const topics: Array<{ key: ArticleTopic; label: string }> = [
@@ -84,15 +91,32 @@ const topics: Array<{ key: ArticleTopic; label: string }> = [
 const topic = ref<ArticleTopic>('exp')
 const sortDir = ref<'desc' | 'asc'>('desc')
 
-/** 面试全量（已发布） */
-const all = listPublished('interview')
+/** 已发布面试内容（后端按展示日期倒序返回） */
+const all = ref<Article[]>([])
+const loading = ref(true)
+const error = ref('')
+
+/** 拉取已发布面试内容 */
+async function load(): Promise<void> {
+  loading.value = true
+  error.value = ''
+  try {
+    all.value = await listPublishedArticles('interview')
+  } catch {
+    error.value = '内容加载失败，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
+}
 
 /** 各栏目数量 */
-const countOf = (key: ArticleTopic): number => all.filter((a) => a.topic === key).length
+const countOf = (key: ArticleTopic): number => all.value.filter((a) => a.topic === key).length
 
 /** 当前栏目 + 排序后的列表 */
 const visible = computed(() => {
-  const list = all.filter((a) => a.topic === topic.value)
+  const list = all.value.filter((a) => a.topic === topic.value)
   return sortDir.value === 'asc' ? [...list].reverse() : list
 })
+
+onMounted(load)
 </script>

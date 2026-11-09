@@ -2,9 +2,9 @@
   <div class="admin">
     <aside class="side">
       <div class="side-logo">
-        <img class="side-logo-img" :src="logoUrl" alt="提示词库" />
+        <img class="side-logo-img" :src="logoUrl" alt="斑马QAQ" />
         <div>
-          <b>提示词库</b>
+          <b>斑马QAQ</b>
           <span>管理后台</span>
         </div>
       </div>
@@ -21,7 +21,28 @@
           :class="{ on: String(route.name ?? '').startsWith('admin-entry') }"
           to="/admin/entries"
         >
-          ▤ 案例管理
+          ▤ 提示词管理
+        </RouterLink>
+        <RouterLink
+          class="side-item"
+          :class="{ on: route.name === 'admin-notes' }"
+          to="/admin/notes"
+        >
+          ✎ 心得管理
+        </RouterLink>
+        <RouterLink
+          class="side-item"
+          :class="{ on: route.name === 'admin-internship' }"
+          to="/admin/internship"
+        >
+          ⧉ 实习管理
+        </RouterLink>
+        <RouterLink
+          class="side-item"
+          :class="{ on: route.name === 'admin-interview' }"
+          to="/admin/interview"
+        >
+          ◈ 面试管理
         </RouterLink>
         <RouterLink
           class="side-item"

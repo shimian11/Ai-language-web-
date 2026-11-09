@@ -4,11 +4,13 @@
     <main class="container-v narrow page-pad">
       <div class="crumbs">
         <RouterLink to="/">首页</RouterLink><span>/</span>
-        <RouterLink :to="`/${type}`">{{ label }}</RouterLink><span>/</span>
+        <RouterLink :to="listPath">{{ label }}</RouterLink><span>/</span>
         <b>{{ article?.title ?? '文章' }}</b>
       </div>
 
-      <template v-if="article">
+      <div v-if="loading" class="empty"><p>正在加载…</p></div>
+
+      <template v-else-if="article">
         <div class="article-head">
           <div class="kicker">{{ article.sub }}</div>
           <!-- 标题 + 收藏按钮同行 -->
@@ -22,7 +24,7 @@
           <div class="article-meta">
             <span>{{ article.date }}</span>
             <span>{{ article.read }}</span>
-            <span v-if="article.result" class="badge" :class="article.resultClass">
+            <span v-if="article.result" class="badge" :class="article.resultClass || 'ok'">
               {{ article.result }}
             </span>
           </div>
@@ -31,20 +33,20 @@
           </div>
         </div>
 
-        <!-- 正文：P1 为 mock 预渲染 HTML；P3 后端为 Markdown，此处换渲染器 -->
-        <!-- eslint-disable-next-line vue/no-v-html -- 正文为本人后台录入的可信内容（非用户输入），v-html 是博客渲染的必要手段 -->
-        <article class="article-body" v-html="article.body"></article>
+        <!-- 正文：后端存 Markdown，前端渲染（内容为管理员本人录入的可信内容） -->
+        <!-- eslint-disable-next-line vue/no-v-html -- 博客正文渲染的必要手段 -->
+        <article class="article-body" v-html="bodyHtml"></article>
 
         <!-- 上一篇 / 下一篇 -->
         <div class="pager">
-          <RouterLink class="btn" :to="`/${type}/${prev?.id ?? article.id}`">← 上一篇</RouterLink>
-          <RouterLink class="btn" :to="`/${type}/${next?.id ?? article.id}`">下一篇 →</RouterLink>
+          <RouterLink class="btn" :to="`${listPath}/${prev?.id ?? article.id}`">← 上一篇</RouterLink>
+          <RouterLink class="btn" :to="`${listPath}/${next?.id ?? article.id}`">下一篇 →</RouterLink>
         </div>
       </template>
 
       <div v-else class="empty">
-        <p>文章不存在或尚未发布。</p>
-        <RouterLink class="btn primary" :to="`/${type}`">← 返回{{ label }}列表</RouterLink>
+        <p>{{ error || '文章不存在或尚未发布。' }}</p>
+        <RouterLink class="btn primary" :to="listPath">← 返回{{ label }}列表</RouterLink>
       </div>
     </main>
 
@@ -59,9 +61,11 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { getArticle, listPublished } from '@/mocks/articles'
+import { getArticleDetail, listPublishedArticles } from '@/api/article'
 import { useFavorites } from '@/composables/useFavorites'
-import type { ArticleType } from '@/types'
+import { ARTICLE_TYPE_META } from '@/config/article'
+import { renderMarkdown } from '@/utils/markdown'
+import type { Article, ArticleType } from '@/types'
 
 const route = useRoute()
 const { has, toggle } = useFavorites()
@@ -73,14 +77,45 @@ const type = computed<ArticleType>(() => {
   return 'note'
 })
 
-/** 类型显示名（面包屑/空态） */
-const label = computed(() => ({ note: '心得', internship: '实习', interview: '面试' })[type.value])
+/** 类型显示名与列表路由（列表路由是复数：/notes、/internship、/interview） */
+const meta = computed(() => ARTICLE_TYPE_META[type.value])
+const label = computed(() => meta.value.label)
+const listPath = computed(() => meta.value.listPath)
 
-/** 当前文章（mock；P3 切接口） */
-const article = ref(getArticle(type.value, String(route.params.id)))
+/** 当前文章 / 同类型已发布列表（用于上一篇下一篇） */
+const article = ref<Article | null>(null)
+const siblings = ref<Article[]>([])
+const loading = ref(true)
+const error = ref('')
+
+/** 正文 HTML：Markdown → HTML */
+const bodyHtml = computed(() => renderMarkdown(article.value?.body))
+
+/** 拉取详情与同类型已发布列表 */
+async function load(): Promise<void> {
+  loading.value = true
+  error.value = ''
+  article.value = null
+  try {
+    const id = String(route.params.id)
+    const [detail, list] = await Promise.all([
+      getArticleDetail(id),
+      listPublishedArticles(type.value),
+    ])
+    article.value = detail
+    siblings.value = list
+  } catch (e) {
+    // 后端对「不存在/未发布」返回业务错误，这里统一展示空态
+    error.value = e instanceof Error ? e.message : '文章加载失败'
+  } finally {
+    loading.value = false
+  }
+}
 
 /** 收藏状态与切换 */
-const faved = computed(() => has(type.value, String(route.params.id)))
+const faved = computed(() =>
+  article.value ? has(type.value, String(article.value.id)) : false,
+)
 function onFav(): void {
   if (!article.value) return
   const a = article.value
@@ -94,18 +129,19 @@ function onFav(): void {
   showToast(added ? '已收藏，可在收藏页查看' : '已取消收藏')
 }
 
-/** 上一篇 / 下一篇（同类型内按日期环形轮转） */
-const siblings = computed(() => listPublished(type.value))
+/** 上一篇 / 下一篇（同类型已发布内按日期环形轮转） */
 const prev = computed(() => {
   const list = siblings.value
   if (!list.length || !article.value) return null
   const i = list.findIndex((a) => a.id === article.value?.id)
+  if (i < 0) return null
   return list[(i - 1 + list.length) % list.length] ?? null
 })
 const next = computed(() => {
   const list = siblings.value
   if (!list.length || !article.value) return null
   const i = list.findIndex((a) => a.id === article.value?.id)
+  if (i < 0) return null
   return list[(i + 1) % list.length] ?? null
 })
 
@@ -113,7 +149,7 @@ const next = computed(() => {
 watch(
   () => [type.value, route.params.id],
   () => {
-    article.value = getArticle(type.value, String(route.params.id))
+    load()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   },
 )
@@ -128,6 +164,9 @@ function showToast(text: string): void {
   window.clearTimeout(timer)
   timer = window.setTimeout(() => (toastShow.value = false), 1400)
 }
+
+// 首次进入即加载（路由参数变化由 watch 负责）
+load()
 </script>
 
 <style scoped>

@@ -58,8 +58,7 @@ export interface Entry {
 
 /* ============================================================
    博客文章（心得 / 实习 / 面试）
-   2026-11 改版新增；P1 使用 src/mocks/articles.ts 的本地数据，
-   P3 后端 article 表就绪后切换为真实接口，字段保持一致。
+   2026-11 改版新增；字段与后端 ArticleVO 一一对应（/api/articles）。
    ============================================================ */
 
 /** 内容类型：心得 / 实习记录 / 面试内容（提示词是独立的 entry，不在此列） */
@@ -79,11 +78,13 @@ export interface Article {
   title: string
   /** 摘要，显示在列表 */
   summary: string
-  /** 正文 HTML（P1 由 mock 提供；P3 后端存 Markdown，前端渲染） */
+  /** 正文 Markdown（内联 HTML 亦为合法 Markdown），前端用 marked 渲染 */
   body: string
   tags: string[]
-  /** 实习记录：所属公司别名（脱敏） */
+  /** 实习记录：所属公司 key（= company.key）；其余为空 */
   company?: string
+  /** 所属公司显示名（后端按 company_id 关联补全） */
+  companyName?: string
   /** 实习记录：时间点（如 2026-08）；其他类型为发布日期 */
   date: string
   /** 面试面经分享的结果标注（通过/未通过/待定），其余为空 */
@@ -92,9 +93,13 @@ export interface Article {
   status: EntryStatus
   /** 阅读时长标注（如「6 分钟」） */
   read: string
+  /** 首次发布日期（yyyy-MM-dd；未发布为空） */
+  publishedAt?: string
+  /** 创建日期（yyyy-MM-dd） */
+  createdAt?: string
 }
 
-/** 公司别名（实习两级时间线第一级；P3 落 company 表） */
+/** 公司别名（实习两级时间线第一级；对应 company 表） */
 export interface Company {
   key: string
   name: string

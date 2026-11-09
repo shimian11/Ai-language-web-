@@ -2,10 +2,10 @@
   <div class="login-page">
     <form class="login-card" @submit.prevent="onSubmit">
       <div class="brand">
-        <img class="brand-img" :src="logoUrl" alt="提示词库" />
+        <img class="brand-img" :src="logoUrl" alt="斑马QAQ" />
       </div>
       <h1>管理员登录</h1>
-      <p class="sub">提示词库 · 管理后台</p>
+      <p class="sub">斑马QAQ · 管理后台</p>
 
       <label class="field">
         <span>用户名</span>

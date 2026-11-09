@@ -56,6 +56,24 @@ const routes: RouteRecordRaw[] = [
         name: 'admin-categories',
         component: () => import('@/views/admin/CategoryManage.vue'),
       },
+      // 文章管理：心得 / 面试共用列表组件（props 区分类型），实习按公司折叠分组
+      {
+        path: 'notes',
+        name: 'admin-notes',
+        component: () => import('@/views/admin/ArticleList.vue'),
+        props: { type: 'note' },
+      },
+      {
+        path: 'internship',
+        name: 'admin-internship',
+        component: () => import('@/views/admin/InternshipManage.vue'),
+      },
+      {
+        path: 'interview',
+        name: 'admin-interview',
+        component: () => import('@/views/admin/ArticleList.vue'),
+        props: { type: 'interview' },
+      },
     ],
   },
   // 发布 / 编辑案例：全屏独立页（不带左侧导航栏），避免侧边栏挤压两列布局
@@ -69,6 +87,19 @@ const routes: RouteRecordRaw[] = [
     path: '/admin/entries/:id/edit',
     name: 'admin-entry-edit',
     component: () => import('@/views/admin/EntryEditor.vue'),
+    meta: { requiresAuth: true },
+  },
+  // 文章编辑器：同样全屏独立，字段按 ?type= 自适应
+  {
+    path: '/admin/articles/new',
+    name: 'admin-article-new',
+    component: () => import('@/views/admin/ArticleEditor.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/articles/:id/edit',
+    name: 'admin-article-edit',
+    component: () => import('@/views/admin/ArticleEditor.vue'),
     meta: { requiresAuth: true },
   },
 ]

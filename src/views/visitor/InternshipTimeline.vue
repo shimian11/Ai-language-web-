@@ -14,9 +14,16 @@
         </p>
       </div>
 
+      <!-- 加载态 / 错误态 -->
+      <div v-if="loading" class="empty"><p>正在加载…</p></div>
+      <div v-else-if="error" class="empty">
+        <p>{{ error }}</p>
+        <button class="btn" type="button" @click="load">重新加载</button>
+      </div>
+
       <!-- 第一级：横向公司时间线 -->
-      <section v-if="!current">
-        <div class="htl">
+      <section v-else-if="!current">
+        <div v-if="companies.length" class="htl">
           <button
             v-for="co in companies"
             :key="co.key"
@@ -31,6 +38,7 @@
             <span class="htl-count">{{ countOf(co.key) }} 篇</span>
           </button>
         </div>
+        <div v-else class="empty"><p>还没有已发布的实习记录。</p></div>
         <p class="htl-hint">点击节点，进入该公司的时间线</p>
       </section>
 
@@ -38,7 +46,7 @@
       <section v-else>
         <div class="lv2-head">
           <div>
-            <a class="lv2-back" href="javascript:void(0)" @click.prevent="current = null">
+            <a class="lv2-back" href="javascript:void(0)" @click.prevent="currentKey = null">
               ← 返回公司时间线
             </a>
             <h2 class="lv2-title">{{ current.name }}</h2>
@@ -53,7 +61,7 @@
           </div>
         </div>
 
-        <div class="timeline">
+        <div v-if="shownItems.length" class="timeline">
           <RouterLink
             v-for="it in shownItems"
             :key="it.id"
@@ -69,13 +77,14 @@
             </span>
           </RouterLink>
         </div>
+        <div v-else class="empty"><p>这家公司还没有已发布的记录。</p></div>
 
         <!-- 分页：每次加载 3 篇 -->
         <div class="load-more">
           <button v-if="restCount > 0" class="btn" type="button" @click="shown += PAGE_SIZE">
             加载更多（剩 {{ restCount }} 篇）
           </button>
-          <span v-else class="load-done">已全部加载</span>
+          <span v-else-if="companyItems.length" class="load-done">已全部加载</span>
         </div>
       </section>
     </main>
@@ -83,50 +92,66 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-import { INTERNSHIP_COMPANIES, listPublished } from '@/mocks/articles'
+import { listCompanies, listPublishedArticles } from '@/api/article'
+import type { CompanyItem } from '@/api/article'
 import type { Article } from '@/types'
 
 /** 每页加载数量 */
 const PAGE_SIZE = 3
 
-/** 公司配置（含里程碑节点） */
-const companies = INTERNSHIP_COMPANIES
+/** 公司别名（第一级）与已发布实习记录 */
+const companies = ref<CompanyItem[]>([])
+const all = ref<Article[]>([])
+const loading = ref(true)
+const error = ref('')
 
-/** 当前选中的公司（null = 停在第一级） */
-const current = ref<(typeof companies)[number] | null>(null)
+/** 当前选中的公司 key（null = 停在第一级） */
+const currentKey = ref<string | null>(null)
 
 /** 排序方向与已显示条数 */
 const order = ref<'asc' | 'desc'>('asc')
 const shown = ref(PAGE_SIZE)
 
-/** 全部已发布实习记录 */
-const all = listPublished('internship')
-
-/** 某公司的记录数（横向时间线计数） */
-function countOf(key: string): number {
-  return all.filter((a) => a.company === key).length
+/** 拉取公司列表与已发布实习记录 */
+async function load(): Promise<void> {
+  loading.value = true
+  error.value = ''
+  try {
+    const [co, list] = await Promise.all([listCompanies(), listPublishedArticles('internship')])
+    companies.value = co
+    all.value = list
+  } catch {
+    error.value = '内容加载失败，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
 }
 
-/** 当前公司的全部记录（按正序） */
-const companyItems = computed<Article[]>(() =>
-  all.filter((a) => a.company === current.value?.key),
-)
+/** 当前公司对象 */
+const current = computed(() => companies.value.find((c) => c.key === currentKey.value) ?? null)
 
-/** 按当前排序方向取前 shown 条（倒序即整表反转后再截取） */
-const shownItems = computed<Article[]>(() => {
-  const list =
-    order.value === 'asc' ? companyItems.value : [...companyItems.value].reverse()
-  return list.slice(0, shown.value)
+/** 某公司的已发布记录数（横向时间线计数） */
+function countOf(key: string): number {
+  return all.value.filter((a) => a.company === key).length
+}
+
+/** 当前公司的全部记录（接口已按日期倒序，正序需反转） */
+const companyItems = computed<Article[]>(() => {
+  const list = all.value.filter((a) => a.company === currentKey.value)
+  return order.value === 'asc' ? [...list].reverse() : list
 })
+
+/** 按当前排序方向取前 shown 条 */
+const shownItems = computed<Article[]>(() => companyItems.value.slice(0, shown.value))
 
 /** 剩余未加载条数 */
 const restCount = computed(() => Math.max(0, companyItems.value.length - shown.value))
 
 /** 进入某公司：重置排序与分页 */
 function openCompany(key: string): void {
-  current.value = companies.find((c) => c.key === key) ?? null
+  currentKey.value = key
   order.value = 'asc'
   shown.value = PAGE_SIZE
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -137,6 +162,8 @@ function toggleOrder(): void {
   order.value = order.value === 'asc' ? 'desc' : 'asc'
   shown.value = PAGE_SIZE
 }
+
+onMounted(load)
 </script>
 
 <style scoped>

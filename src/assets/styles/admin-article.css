@@ -1,0 +1,336 @@
+/* ============================================================
+   后台文章管理（心得 / 实习 / 面试）共用样式
+   仅服务于 views/admin/ArticleList.vue 与 InternshipManage.vue；
+   类名统一 am- 前缀，避免与前台 visitor.css 的 .badge/.tabs 冲突。
+   ============================================================ */
+
+.am-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+}
+
+.am-head {
+  padding: 40px 32px 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.am-head h1 {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.am-head p {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.am-toolbar {
+  padding: 0 32px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.am-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.am-tab {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.am-tab:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.am-tab.on {
+  background: var(--ink);
+  color: var(--paper-2);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.am-tab .n {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+
+.am-spacer {
+  flex: 1;
+}
+
+.am-search {
+  width: 240px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-2);
+  padding: 0 14px;
+  font-size: 13px;
+  color: var(--ink);
+  outline: none;
+  transition: border 0.15s;
+}
+
+.am-search:focus {
+  border-color: var(--ink);
+}
+
+.am-panel-wrap {
+  padding: 0 32px;
+}
+
+.am-panel {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.am-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.am-table th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--ink-2);
+  font-weight: 500;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 55%, var(--paper-2));
+}
+
+.am-table td {
+  padding: 12px 18px;
+  border-bottom: 1px dashed var(--line);
+  font-size: 13.5px;
+  vertical-align: middle;
+}
+
+.am-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--paper) 45%, transparent);
+}
+
+.am-title {
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.am-sub {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 3px;
+  display: block;
+}
+
+/* 状态徽标 */
+.am-st {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.am-st i {
+  font-style: normal;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.am-st.pub {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+}
+
+.am-st.pub i {
+  background: var(--green);
+}
+
+.am-st.draft {
+  color: var(--ink-2);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.am-st.draft i {
+  background: var(--ink-3);
+}
+
+.am-date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.am-ops {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.am-op {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: 0.15s;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.am-op:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.am-op.pub {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 45%, var(--line));
+}
+
+.am-op.danger:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--paper-2);
+}
+
+.am-empty {
+  text-align: center;
+  color: var(--ink-2);
+  padding: 48px 0;
+  font-size: 13px;
+}
+
+.am-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+  flex-wrap: wrap;
+}
+
+.am-foot b {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+/* 折叠分组（实习管理） */
+.am-group-row td {
+  padding: 0;
+}
+
+.am-g-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  padding: 13px 16px;
+  transition: background 0.2s;
+}
+
+.am-g-toggle:hover {
+  background: color-mix(in srgb, var(--red) 4%, transparent);
+}
+
+.am-chevron {
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-3);
+  transition: transform 0.25s var(--ease);
+}
+
+.am-group-row.open .am-chevron {
+  transform: rotate(90deg);
+}
+
+.am-g-toggle b {
+  font-family: var(--serif);
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.am-g-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.am-g-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.am-g-latest {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 900px) {
+  .am-hide-sm {
+    display: none;
+  }
+
+  .am-search {
+    width: 100%;
+  }
+}

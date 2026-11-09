@@ -104,9 +104,9 @@ const visible = computed(() =>
   [...favItems.value].reverse().filter((x) => x.type === currentTab.value),
 )
 
-/** 收藏条目详情链接：提示词 → /prompts/:id；文章 → /类型/:id */
+/** 收藏条目详情链接：统一取类型配置里的列表路由（/prompts、/notes、/internship、/interview） */
 function linkOf(item: FavItem): string {
-  return item.type === 'prompt' ? `/prompts/${item.id}` : `/${item.type}/${item.id}`
+  return `${typeMeta[item.type].list}/${item.id}`
 }
 
 /** Toast */
