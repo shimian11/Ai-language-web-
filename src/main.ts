@@ -7,6 +7,8 @@ import router from './router'
 import './assets/styles/element-overrides.scss'
 import './assets/styles/reset.css'
 import './assets/styles/tokens.css'
+// 访客端全局样式（纸感实体；作用域 .visitor-page，不影响后台）
+import './assets/styles/visitor.css'
 
 const app = createApp(App)
 

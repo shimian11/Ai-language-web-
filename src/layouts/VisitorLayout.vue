@@ -1,67 +1,79 @@
 <template>
-  <div class="visitor">
+  <!-- 访客端外壳：纸感顶栏 + 页面出口 + 页脚 -->
+  <div class="visitor-page">
     <header class="topbar">
       <div class="topbar-in">
-        <RouterLink class="logo" to="/">
-          <img class="logo-img" :src="logoUrl" alt="AI 网页设计提示词库" />
-          网页设计<em>提示词库</em>
-          <span class="logo-tag">个人博客总结网站</span>
+        <!-- 品牌区：只用昵称，不出现真实姓名 -->
+        <RouterLink class="brand" to="/">
+          <b>斑马QAQ</b>
+          <span>Personal Blog</span>
         </RouterLink>
-        <div class="search">
-          <input
-            v-model="entryStore.keyword"
-            type="text"
-            placeholder="搜索提示词、案例、标签…"
-            @keyup.enter="onSearch"
-          />
+        <!-- 主导航：四个内容面 -->
+        <nav class="nav">
+          <RouterLink to="/" :class="{ on: isActive('home') }">首页</RouterLink>
+          <RouterLink to="/prompts" :class="{ on: isActive('prompts') || isActive('prompt-detail') }">
+            提示词
+          </RouterLink>
+          <RouterLink to="/notes" :class="{ on: isActive('notes') || isActive('article-note') }">
+            心得
+          </RouterLink>
+          <RouterLink
+            to="/internship"
+            :class="{ on: isActive('internship') || isActive('article-internship') }"
+          >
+            实习
+          </RouterLink>
+          <RouterLink
+            to="/interview"
+            :class="{ on: isActive('interview') || isActive('article-interview') }"
+          >
+            面试
+          </RouterLink>
+        </nav>
+        <!-- 右侧：收藏与 GitHub -->
+        <div class="right">
+          <RouterLink class="pill ghost" to="/favorites">收藏</RouterLink>
+          <a
+            class="pill gh"
+            href="https://github.com/"
+            target="_blank"
+            rel="noopener"
+          >
+            GitHub
+          </a>
         </div>
-        <RouterLink class="pill" to="/favorites">我的收藏</RouterLink>
       </div>
     </header>
+
     <router-view />
+
+    <footer class="v-footer">
+      <div class="container-v foot-in">
+        <span>© 2026 斑马QAQ · 个人博客</span>
+        <a href="https://github.com/" target="_blank" rel="noopener">GITHUB ↗</a>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
-import { useEntryStore } from '@/stores/entry'
-import logoUrl from '@/assets/logo.jpg'
+const route = useRoute()
 
-const router = useRouter()
-const entryStore = useEntryStore()
-
-// 前台无登录入口（管理后台经 /admin/login 书签直达）
-// 关键词防抖 300ms 自动搜索；仅在首页时触发请求
-let timer: number | undefined
-
-watch(
-  () => entryStore.keyword,
-  () => {
-    window.clearTimeout(timer)
-    timer = window.setTimeout(onSearch, 300)
-  },
-)
-
-function onSearch(): void {
-  window.clearTimeout(timer)
-  entryStore.page = 1
-  if (router.currentRoute.value.name !== 'home') {
-    router.push({ name: 'home' })
-  }
-  entryStore.fetchEntries()
+/** 判断当前路由是否命中指定路由名（导航高亮用） */
+function isActive(name: string): boolean {
+  return route.name === name
 }
-
-onBeforeUnmount(() => window.clearTimeout(timer))
 </script>
 
 <style scoped>
+/* 顶栏：纸感 + 毛玻璃 */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(250, 249, 246, 0.92);
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -70,84 +82,106 @@ onBeforeUnmount(() => window.clearTimeout(timer))
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 32px;
-  height: 64px;
+  height: 60px;
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 26px;
 }
 
-.logo {
+/* 品牌：昵称 + 英文标注 */
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.brand b {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.brand span {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+/* 主导航 */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-left: 8px;
+}
+.nav a {
+  color: var(--ink-2);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+  transition: color 0.25s, border-color 0.25s;
+}
+.nav a:hover,
+.nav a.on {
+  color: var(--ink);
+  border-color: var(--red);
+}
+
+/* 右侧动作区 */
+.right {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: 0.5px;
 }
-
-.logo-img {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.logo em {
-  font-style: normal;
-  color: var(--accent);
-}
-
-.logo-tag {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--ink-2);
-  opacity: 0.75;
-  letter-spacing: 0;
-  margin-left: 2px;
-}
-
-.search {
-  flex: 1;
-  max-width: 420px;
-  margin-left: auto;
-}
-
-.search input {
-  width: 100%;
-  height: 38px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--card);
-  padding: 0 16px 0 40px;
-  font-size: 14px;
-  color: var(--ink);
-  outline: none;
-  transition: border 0.15s;
-}
-
-.search input:focus {
-  border-color: var(--ink);
-}
-
 .pill {
-  height: 38px;
-  padding: 0 18px;
-  border-radius: 999px;
-  border: 1px solid var(--ink);
-  font-size: 14px;
-  font-weight: 500;
-  background: transparent;
-  cursor: pointer;
-  transition: 0.15s;
-  color: var(--ink);
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  text-decoration: none;
+  color: var(--ink-2);
+  transition: 0.2s;
   white-space: nowrap;
 }
-
 .pill:hover {
-  background: var(--ink);
-  color: var(--bg);
+  color: var(--ink);
+  border-color: var(--ink-3);
+  transform: translateY(-1px);
+}
+.pill.ghost.on,
+.pill.ghost.router-link-active {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.pill.gh::after {
+  content: '↗';
+  color: var(--red);
+}
+
+/* 页脚 */
+.foot-in {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+@media (max-width: 860px) {
+  .nav {
+    display: none;
+  }
+  .topbar-in {
+    padding: 0 18px;
+  }
 }
 </style>

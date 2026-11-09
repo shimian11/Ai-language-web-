@@ -20,8 +20,21 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: () => import('@/layouts/VisitorLayout.vue'),
     children: [
-      { path: '', name: 'home', component: () => import('@/views/visitor/Home.vue') },
-      { path: 'entry/:id', name: 'entry-detail', component: () => import('@/views/visitor/EntryDetail.vue') },
+      // 首页：四面景深轮播（提示词 / 心得 / 实习 / 面试）
+      { path: '', name: 'home', component: () => import('@/views/visitor/HomeFaces.vue') },
+      // 提示词：列表 + 详情（详情沿用 entry 数据源）
+      { path: 'prompts', name: 'prompts', component: () => import('@/views/visitor/PromptsList.vue') },
+      { path: 'prompts/:id', name: 'prompt-detail', component: () => import('@/views/visitor/EntryDetail.vue') },
+      // 旧链接兼容：线上已被索引/收藏的 /entry/:id 永久重定向到新路由
+      { path: 'entry/:id', redirect: (to) => ({ path: `/prompts/${to.params.id}`, replace: true }) },
+      // 心得 / 实习 / 面试：列表 + 详情（P1 走 mock，P3 切真实接口）
+      { path: 'notes', name: 'notes', component: () => import('@/views/visitor/NotesList.vue') },
+      { path: 'notes/:id', name: 'article-note', component: () => import('@/views/visitor/ArticleDetail.vue') },
+      { path: 'internship', name: 'internship', component: () => import('@/views/visitor/InternshipTimeline.vue') },
+      { path: 'internship/:id', name: 'article-internship', component: () => import('@/views/visitor/ArticleDetail.vue') },
+      { path: 'interview', name: 'interview', component: () => import('@/views/visitor/InterviewList.vue') },
+      { path: 'interview/:id', name: 'article-interview', component: () => import('@/views/visitor/ArticleDetail.vue') },
+      // 收藏：本地 localStorage，四类 Tab
       { path: 'favorites', name: 'favorites', component: () => import('@/views/visitor/Favorites.vue') },
     ],
   },
