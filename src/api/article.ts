@@ -111,3 +111,13 @@ export function listCompanies(): Promise<CompanyItem[]> {
 export function createCompany(data: CompanyCreatePayload): Promise<CompanyItem> {
   return http.post<CompanyItem>('/articles/companies', data)
 }
+
+/** 编辑节点：key 保持不变，只改名称/角色标注/里程碑 */
+export function updateCompany(key: string, data: CompanyCreatePayload): Promise<CompanyItem> {
+  return http.put<CompanyItem>(`/articles/companies/${encodeURIComponent(key)}`, data)
+}
+
+/** 删除节点：仅当名下无记录（用于清理空节点） */
+export function removeCompany(key: string): Promise<void> {
+  return http.delete<void>(`/articles/companies/${encodeURIComponent(key)}`)
+}

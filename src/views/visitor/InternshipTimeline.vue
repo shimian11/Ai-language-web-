@@ -21,11 +21,11 @@
         <button class="btn" type="button" @click="load">重新加载</button>
       </div>
 
-      <!-- 第一级：横向公司时间线 -->
+      <!-- 第一级：横向公司时间线（只显示有已发布记录的节点） -->
       <section v-else-if="!current">
-        <div v-if="companies.length" class="htl">
+        <div v-if="visibleCompanies.length" class="htl">
           <button
-            v-for="co in companies"
+            v-for="co in visibleCompanies"
             :key="co.key"
             type="button"
             class="htl-node"
@@ -39,7 +39,7 @@
           </button>
         </div>
         <div v-else class="empty"><p>还没有已发布的实习记录。</p></div>
-        <p class="htl-hint">点击节点，进入该公司的时间线</p>
+        <p v-if="visibleCompanies.length" class="htl-hint">点击节点，进入该公司的时间线</p>
       </section>
 
       <!-- 第二级：公司竖向时间线 -->
@@ -136,6 +136,9 @@ const current = computed(() => companies.value.find((c) => c.key === currentKey.
 function countOf(key: string): number {
   return all.value.filter((a) => a.company === key).length
 }
+
+/** 只展示有已发布记录的节点：空节点（后台建了但没发文）不进前台时间线 */
+const visibleCompanies = computed(() => companies.value.filter((c) => countOf(c.key) > 0))
 
 /** 当前公司的全部记录（接口已按日期倒序，正序需反转） */
 const companyItems = computed<Article[]>(() => {

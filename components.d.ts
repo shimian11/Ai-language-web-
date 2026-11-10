@@ -11,6 +11,7 @@ declare module 'vue' {
     CategoryPills: typeof import('./src/components/business/CategoryPills.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
+    ElDrawer: typeof import('element-plus/es')['ElDrawer']
     ElSkeleton: typeof import('element-plus/es')['ElSkeleton']
     ElSkeletonItem: typeof import('element-plus/es')['ElSkeletonItem']
     EmptyState: typeof import('./src/components/common/EmptyState.vue')['default']
