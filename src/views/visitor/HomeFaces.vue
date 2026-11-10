@@ -540,8 +540,8 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 50%;
   top: 50%;
-  /* 卡片缩小：宽度收窄、高度贴合舞台 */
-  width: clamp(280px, 36vw, 470px);
+  /* 卡片横向加宽：高度不变，仍保持一屏无滚动条 */
+  width: clamp(330px, 42vw, 580px);
   height: 100%;
   transform:
     translate(-50%, -50%)
