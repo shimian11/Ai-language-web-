@@ -109,6 +109,8 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { useFaceWheel } from '@/composables/useFaceWheel'
+
 /** 单面配置：文案与跳转目标 */
 interface FaceConfig {
   key: 'prompts' | 'notes' | 'internship' | 'interview'
@@ -197,21 +199,23 @@ function setFaceRef(el: unknown, i: number): void {
   faceEls[i] = el as HTMLElement | null
 }
 
-/* ---------- 交互状态（非响应式：只用于命令式渲染） ---------- */
-let index = 0
+/* ---------- 交互状态 ---------- */
+/* index 必须是响应式：模板的 is-active / aria-hidden 都绑定它。
+   此前用 let 非响应式变量，卡片 CSS 变量在动但高亮/流光永远停在第一张。 */
+const index = ref(0)
 let dragPx = 0
 let startX = 0
 let dragging = false
 let moved = false
 let captured = false
-let wheelLock = 0
 let tiltRaf = 0
 
 /** 应用当前 index 的景深与视差 */
 function render(): void {
+  const cur = index.value
   faceEls.forEach((el, i) => {
     if (!el) return
-    const off = i - index
+    const off = i - cur
     const abs = Math.abs(off)
     const d = DEPTH[Math.min(abs, 3)]
     const dir = Math.sign(off)
@@ -226,18 +230,18 @@ function render(): void {
   })
   // 背景视差：每个光斑位移幅度不同，网格同步
   const shifts = [blob1.value, blob2.value, blob3.value]
-  shifts.forEach((b, i) => b?.style.setProperty('--px', `${-index * (18 + i * 10)}px`))
-  gridBg.value?.style.setProperty('--gx', `${-index * 26}px`)
+  shifts.forEach((b, i) => b?.style.setProperty('--px', `${-cur * (18 + i * 10)}px`))
+  gridBg.value?.style.setProperty('--gx', `${-cur * 26}px`)
 }
 
 /** 跳到指定面（带边界收敛） */
 function go(next: number): void {
-  index = Math.max(0, Math.min(faces.length - 1, next))
+  index.value = Math.max(0, Math.min(faces.length - 1, next))
   render()
 }
 /** 步进 ±1 */
 function step(dir: number): void {
-  go(index + dir)
+  go(index.value + dir)
 }
 
 /* ---------- 指针：拖拽与点击的分工 ----------
@@ -296,7 +300,7 @@ function onKeydown(e: KeyboardEvent): void {
   if (e.key === 'ArrowLeft') step(-1)
 }
 function onTilt(e: MouseEvent): void {
-  const active = faceEls[index]
+  const active = faceEls[index.value]
   if (!active || window.innerWidth <= 820) return
   const r = active.getBoundingClientRect()
   const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 7
@@ -323,41 +327,39 @@ function onStageClick(e: MouseEvent): void {
   if (e.clientX - rect.left < rect.width / 2) step(-1)
   else step(1)
 }
-function onWheel(e: WheelEvent): void {
-  if (window.innerWidth <= 820) return
-  const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY)
-  const delta = horizontal ? e.deltaX : e.deltaY
-  if (Math.abs(delta) < 12) return
-  e.preventDefault()
-  const now = Date.now()
-  if (now - wheelLock < 680) return
-  wheelLock = now
-  step(delta > 0 ? 1 : -1)
-}
 function onFaceClick(i: number): void {
   // 拖拽后的 click 抑制；侧卡居中，中心卡进入列表
   if (moved) {
     moved = false
     return
   }
-  if (i !== index) {
+  if (i !== index.value) {
     go(i)
     return
   }
   void router.push(faces[i].link)
 }
 
+/* ---------- 滚轮接管：整页无滚动条，滚轮上下都切换卡片 ----------
+   原页面可滚动，滚到中部后「上滑/下滑滚轮」行为不一致；
+   现在 stage 挂满剩余视口，滚轮事件统一接管为切换（见 composable） */
+const { bindWheel, unbindWheel } = useFaceWheel(() => step(1), () => step(-1))
+
+/** 移动端（≤820px）降级为纵向卡片栈：滚动时高亮进入视口的面 */
 let mobileObserver: IntersectionObserver | null = null
 
 onMounted(() => {
   const stage = stageRef.value
   if (!stage) return
+  // 首页锁定一屏：隐藏 layout 页脚（滚轮接管 + 无滚动条）
+  document.body.classList.add('home-fullscreen')
   stage.addEventListener('pointerdown', onDown)
   stage.addEventListener('pointermove', onMove)
   stage.addEventListener('pointerup', onUp)
   stage.addEventListener('pointercancel', onUp)
   stage.addEventListener('click', onStageClick)
-  stage.addEventListener('wheel', onWheel, { passive: false })
+  // 滚轮接管：桌面端整页监听（页面本身无滚动条，滚轮只表达切换意图）
+  bindWheel(window)
   stage.addEventListener('mousemove', onTilt)
   stage.addEventListener('mouseleave', () => {
     // 鼠标离场：倾角复位
@@ -379,9 +381,8 @@ onMounted(() => {
         entries.forEach((en) => {
           if (!en.isIntersecting || window.innerWidth > 820) return
           const i = faceEls.indexOf(en.target as HTMLElement)
-          if (i > -1 && i !== index) {
-            index = i
-            render()
+          if (i > -1 && i !== index.value) {
+            go(i)
           }
         })
       },
@@ -392,6 +393,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('home-fullscreen')
   const stage = stageRef.value
   if (stage) {
     stage.removeEventListener('pointerdown', onDown)
@@ -399,19 +401,23 @@ onBeforeUnmount(() => {
     stage.removeEventListener('pointerup', onUp)
     stage.removeEventListener('pointercancel', onUp)
     stage.removeEventListener('click', onStageClick)
-    stage.removeEventListener('wheel', onWheel)
     stage.removeEventListener('mousemove', onTilt)
   }
+  unbindWheel()
   window.removeEventListener('keydown', onKeydown)
   cancelAnimationFrame(tiltRaf)
-  mobileObserver?.disconnect()
 })
 </script>
 
 <style scoped>
 /* ================= 背景 ================= */
+/* 整页锁定一屏：无滚动条，滚轮只用于切换卡片 */
 .home-page {
-  overflow-x: hidden;
+  /* 覆盖 .visitor-page 的 min-height:100vh；高度 = 100vh − 顶栏(61px) */
+  min-height: 0;
+  height: calc(100vh - 61px);
+  height: calc(100dvh - 61px);
+  overflow: hidden;
 }
 .backdrop {
   position: fixed;
@@ -466,15 +472,16 @@ onBeforeUnmount(() => {
 .stage-wrap {
   position: relative;
   z-index: 10;
-  min-height: 100vh;
+  /* 高度 = home-page 高度（顶栏下方全部空间） */
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 88px 0 40px;
+  padding: 12px 0 10px;
 }
 .intro {
   text-align: center;
-  margin-bottom: clamp(16px, 2.6vh, 30px);
+  margin-bottom: clamp(10px, 1.6vh, 18px);
   padding: 0 24px;
   animation: rise 0.9s var(--ease) both;
 }
@@ -489,8 +496,8 @@ onBeforeUnmount(() => {
   font-family: var(--serif);
   font-weight: 600;
   letter-spacing: 0.04em;
-  font-size: clamp(26px, 3.2vw, 42px);
-  margin: 10px 0 8px;
+  font-size: clamp(22px, 2.6vw, 34px);
+  margin: 8px 0 6px;
   line-height: 1.18;
 }
 .intro h1 em {
@@ -499,13 +506,14 @@ onBeforeUnmount(() => {
 }
 .intro p {
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 12.5px;
   letter-spacing: 0.04em;
 }
 
 .stage {
   position: relative;
-  height: clamp(440px, 66vh, 600px);
+  /* 卡片缩小：高度吃剩余空间（减去 intro 与 controls 的预算） */
+  height: clamp(360px, calc(100dvh - 60px - 150px), 520px);
   perspective: 1050px;
   perspective-origin: 50% 48%;
   touch-action: pan-y;
@@ -532,8 +540,9 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(310px, 53vw, 740px);
-  height: clamp(440px, 66vh, 600px);
+  /* 卡片缩小：宽度收窄、高度贴合舞台 */
+  width: clamp(280px, 36vw, 470px);
+  height: 100%;
   transform:
     translate(-50%, -50%)
     translateX(calc(var(--x, 0) * 1% + var(--drag, 0) * 1px))
@@ -628,7 +637,7 @@ onBeforeUnmount(() => {
 /* ================= 封面视觉区 ================= */
 .art {
   position: relative;
-  flex: 0 0 42%;
+  flex: 0 0 38%;
   overflow: hidden;
   background:
     radial-gradient(120% 90% at 18% 0%, color-mix(in srgb, var(--red) 11%, transparent), transparent 62%),
@@ -793,7 +802,7 @@ onBeforeUnmount(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px 28px 22px;
+  padding: 18px 22px 16px;
   min-height: 0;
 }
 .kicker {
@@ -814,30 +823,34 @@ onBeforeUnmount(() => {
 }
 .body h2 {
   font-family: var(--serif);
-  font-size: clamp(22px, 2.1vw, 30px);
+  font-size: clamp(19px, 1.7vw, 25px);
   font-weight: 600;
   letter-spacing: 0.05em;
-  margin: 12px 0 8px;
+  margin: 9px 0 6px;
   line-height: 1.25;
 }
 .desc {
   color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.78;
+  font-size: 12.5px;
+  line-height: 1.7;
   max-width: 34em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .mini {
-  margin-top: 16px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 7px;
 }
 .mini li {
   list-style: none;
   display: flex;
   gap: 10px;
   align-items: baseline;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--ink);
 }
 .mini li b {
@@ -880,11 +893,11 @@ onBeforeUnmount(() => {
 .controls {
   position: relative;
   z-index: 20;
-  margin-top: 24px;
+  margin-top: clamp(10px, 1.8vh, 20px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .track {
   display: flex;
@@ -940,6 +953,15 @@ onBeforeUnmount(() => {
   }
 }
 @media (max-width: 820px) {
+  /* 移动端恢复纵向滚动浏览（滚轮接管仅桌面端） */
+  .home-page {
+    height: auto;
+    overflow: visible;
+  }
+  .stage-wrap {
+    height: auto;
+    padding: 76px 0 40px;
+  }
   .stage {
     height: auto;
     perspective: none;

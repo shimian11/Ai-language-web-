@@ -47,38 +47,79 @@
         <button class="btn" type="button" @click="load">重新加载</button>
       </div>
 
-      <!-- 当前栏目列表 -->
-      <div v-else-if="visible.length" class="list">
-        <RouterLink
-          v-for="a in visible"
-          :key="a.id"
-          class="list-item"
-          :to="`/interview/${a.id}`"
-        >
-          <span class="list-date">{{ a.date }}</span>
-          <span>
-            <span class="list-title">{{ a.title }}</span>
-            <span class="list-desc">{{ a.summary }}</span>
-          </span>
-          <!-- 结果徽标：面经显示通过/未通过；八股/算法显示难度或频次 -->
-          <span class="list-meta">
-            <span v-if="a.result" class="badge" :class="a.resultClass || 'ok'">{{ a.result }}</span>
-          </span>
-        </RouterLink>
-      </div>
-      <div v-else class="empty">
-        <p>这个栏目还没有已发布的内容。</p>
-        <RouterLink class="btn primary" to="/notes">去心得栏目看看 →</RouterLink>
-      </div>
+      <!-- 面经分享：列表视图 -->
+      <template v-else-if="topic === 'exp'">
+        <div v-if="visible.length" class="list">
+          <RouterLink
+            v-for="a in visible"
+            :key="a.id"
+            class="list-item"
+            :to="`/interview/${a.id}`"
+          >
+            <span class="list-date">{{ a.date }}</span>
+            <span>
+              <span class="list-title">{{ a.title }}</span>
+              <span class="list-desc">{{ a.summary }}</span>
+            </span>
+            <!-- 结果徽标：通过/未通过 -->
+            <span class="list-meta">
+              <span v-if="a.result" class="badge" :class="a.resultClass || 'ok'">{{ a.result }}</span>
+            </span>
+          </RouterLink>
+        </div>
+        <div v-else class="empty">
+          <p>这个栏目还没有已发布的内容。</p>
+          <RouterLink class="btn primary" to="/notes">去心得栏目看看 →</RouterLink>
+        </div>
+      </template>
+
+      <!-- 八股考题 / 算法题：知识图谱视图 -->
+      <template v-else>
+        <div v-if="graphArticles.length" class="kg-wrap">
+          <p class="kg-hint">
+            {{ topic === 'bigu' ? '按知识点串联的高频考题' : '按题型串联的算法沉淀' }} · 点击节点查看文章
+          </p>
+          <KnowledgeGraph
+            :articles="graphArticles"
+            :root-label="topic === 'bigu' ? '八股考题' : '算法题'"
+            @open="openArticle"
+          />
+          <div class="list kg-list-below">
+            <RouterLink
+              v-for="a in visible"
+              :key="a.id"
+              class="list-item"
+              :to="`/interview/${a.id}`"
+            >
+              <span class="list-date">{{ a.date }}</span>
+              <span>
+                <span class="list-title">{{ a.title }}</span>
+                <span class="list-desc">{{ a.summary }}</span>
+              </span>
+              <span class="list-meta">
+                <span v-for="t in a.tags.slice(0, 2)" :key="t" class="tag">{{ t }}</span>
+              </span>
+            </RouterLink>
+          </div>
+        </div>
+        <div v-else class="empty">
+          <p>这个栏目还没有已发布的内容。</p>
+          <RouterLink class="btn primary" to="/notes">去心得栏目看看 →</RouterLink>
+        </div>
+      </template>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+import KnowledgeGraph from '@/components/visitor/KnowledgeGraph.vue'
 import { listPublishedArticles } from '@/api/article'
 import type { Article, ArticleTopic } from '@/types'
+
+const router = useRouter()
 
 /** 栏目定义 */
 const topics: Array<{ key: ArticleTopic; label: string }> = [
@@ -118,5 +159,44 @@ const visible = computed(() => {
   return sortDir.value === 'asc' ? [...list].reverse() : list
 })
 
+/** 图谱视图数据：当前栏目的文章（按 tags[0] 聚合为主题） */
+const graphArticles = computed(() => visible.value)
+
+function openArticle(id: number): void {
+  void router.push(`/interview/${id}`)
+}
+
 onMounted(load)
 </script>
+
+<style scoped>
+.kg-wrap {
+  margin-top: 4px;
+}
+
+.kg-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  margin: 0 0 12px;
+}
+
+.kg-list-below {
+  margin-top: 26px;
+  padding-top: 8px;
+}
+
+/* 窄屏：图谱节点必然拥挤，降级为纯列表 */
+@media (max-width: 820px) {
+  .kg-wrap > .kg {
+    display: none;
+  }
+  .kg-hint {
+    display: none;
+  }
+  .kg-list-below {
+    margin-top: 0;
+  }
+}
+</style>

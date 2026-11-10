@@ -17,6 +17,7 @@ declare module 'vue' {
     EntryCard: typeof import('./src/components/business/EntryCard.vue')['default']
     HtmlPreview: typeof import('./src/components/business/HtmlPreview.vue')['default']
     ImageUploader: typeof import('./src/components/business/ImageUploader.vue')['default']
+    KnowledgeGraph: typeof import('./src/components/visitor/KnowledgeGraph.vue')['default']
     PageSkeleton: typeof import('./src/components/common/PageSkeleton.vue')['default']
     PromptBlock: typeof import('./src/components/business/PromptBlock.vue')['default']
     PromptEditor: typeof import('./src/components/business/PromptEditor.vue')['default']
