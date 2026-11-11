@@ -559,25 +559,6 @@
 :where(.visitor-page) .demo-bar i:nth-child(1) { background: var(--red); }
 :where(.visitor-page) .demo-bar i:nth-child(2) { background: var(--gold); }
 :where(.visitor-page) .demo-bar i:nth-child(3) { background: var(--green); }
-:where(.visitor-page) .demo-frame {
-  position: relative;
-  height: min(62vh, 560px);
-  border: 1px solid var(--line);
-  overflow: hidden;
-  background: #fff;
-  box-shadow: var(--shadow);
-  margin: 0 0 14px;
-}
-/* 与 demo-bar 相接时：交界处改直角，避免圆角缺角 */
-:where(.visitor-page) .demo-bar + .demo-frame {
-  border-radius: 0 0 14px 14px;
-}
-:where(.visitor-page) .demo-frame iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  background: #fff;
-}
 /* ---------- 收藏按钮（标题右侧同行） ---------- */
 :where(.visitor-page) .fav-btn {
   display: inline-flex;

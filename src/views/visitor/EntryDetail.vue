@@ -50,12 +50,12 @@
         <!-- 主体：左（演示/效果图） 右（提示词/信息/相关） -->
         <div class="layout">
           <div>
-            <div v-if="entry.htmlSource">
-              <div class="demo-bar">
+            <div v-if="entry.htmlSource" class="preview-box">
+              <div ref="demoBarRef" class="demo-bar">
                 <i></i><i></i><i></i>
                 <span style="margin-left: 6px">HTML PREVIEW · 实时渲染</span>
               </div>
-              <HtmlPreview :source="entry.htmlSource" height="480px" />
+              <HtmlPreview :source="entry.htmlSource" :height="previewHeight" framed />
             </div>
 
             <div v-if="entry.images.length" class="panel img-panel">
@@ -78,7 +78,7 @@
             </div>
           </div>
 
-          <aside>
+          <aside ref="asideRef">
             <PromptBlock
               :prompt="entry.prompt"
               :entry-id="entry.id"
@@ -90,7 +90,7 @@
               </template>
             </PromptBlock>
 
-            <div class="panel aside-panel">
+            <div ref="infoPanelRef" class="panel aside-panel">
               <div class="panel-title">案例信息</div>
               <div class="panel-body">
                 <div class="info-row"><span class="k">所属标签</span><span class="v">{{ entry.tags.join(' / ') || '未标注' }}</span></div>
@@ -103,7 +103,7 @@
               </div>
             </div>
 
-            <div v-if="related.length" class="panel aside-panel">
+            <div v-if="related.length" ref="relatedPanelRef" class="panel aside-panel">
               <div class="panel-title">
                 同类提示词
                 <span class="no">共享「{{ primaryTag }}」标签</span>
@@ -138,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -201,6 +201,75 @@ async function load(): Promise<void> {
   }
 }
 
+/* ==================== HTML 预览高度：与右列模块底线视觉持平 ==================== */
+const demoBarRef = ref<HTMLElement | null>(null)
+const asideRef = ref<HTMLElement | null>(null)
+const infoPanelRef = ref<HTMLElement | null>(null)
+const relatedPanelRef = ref<HTMLElement | null>(null)
+const previewHeight = ref('480px')
+
+let asideObserver: ResizeObserver | null = null
+let observedAside = false
+let measureRaf = 0
+
+/**
+ * 无效果图：预览底边对齐「同类提示词」（右列最底）；
+ * 有效果图：预览底边对齐「案例信息」，下方由效果图继续承接。
+ * 高度 = 目标模块 bottom − demo-bar bottom（接缝位置）。
+ */
+function measurePreview(): void {
+  const bar = demoBarRef.value
+  if (!bar || !entry.value?.htmlSource) return
+  // 窄屏为单列布局，右列在预览下方，测量无意义
+  if (window.innerWidth <= 1020) {
+    previewHeight.value = '520px'
+    return
+  }
+  const hasImages = (entry.value.images?.length ?? 0) > 0
+  const target = hasImages
+    ? infoPanelRef.value ?? relatedPanelRef.value
+    : relatedPanelRef.value ?? infoPanelRef.value
+  if (!target) return
+  const h = Math.round(target.getBoundingClientRect().bottom - bar.getBoundingClientRect().bottom)
+  const next = `${Math.max(480, Math.min(h, 1400))}px`
+  if (next !== previewHeight.value) previewHeight.value = next
+}
+
+function scheduleMeasure(): void {
+  cancelAnimationFrame(measureRaf)
+  measureRaf = requestAnimationFrame(measurePreview)
+}
+
+/** aside 在数据就绪后才挂载，首次出现时挂上尺寸监听 */
+function observeAside(): void {
+  if (observedAside || !asideObserver || !asideRef.value) return
+  asideObserver.observe(asideRef.value)
+  observedAside = true
+}
+
+watch(
+  [entry, related],
+  async () => {
+    await nextTick()
+    observeAside()
+    scheduleMeasure()
+  },
+  { flush: 'post' },
+)
+
+onMounted(() => {
+  window.addEventListener('resize', scheduleMeasure, { passive: true })
+  if ('ResizeObserver' in window) asideObserver = new ResizeObserver(scheduleMeasure)
+  observeAside()
+  scheduleMeasure()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', scheduleMeasure)
+  cancelAnimationFrame(measureRaf)
+  asideObserver?.disconnect()
+})
+
 /** 切换收藏（新签名：整条 FavItem） */
 function toggleFav(): void {
   if (!entry.value) return
@@ -246,6 +315,12 @@ load()
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 24px;
+}
+/* 浏览器窗口外壳：统一圆角与投影，避免上下两半各自产生阴影接缝 */
+.preview-box {
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 @media (max-width: 1020px) {
   .layout {
