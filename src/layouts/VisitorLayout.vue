@@ -35,7 +35,7 @@
           <RouterLink class="pill ghost" to="/favorites">收藏</RouterLink>
           <a
             class="pill gh"
-            href="https://github.com/"
+            href="https://github.com/shimian11"
             target="_blank"
             rel="noopener"
           >
@@ -50,7 +50,7 @@
     <footer class="v-footer">
       <div class="container-v foot-in">
         <span>© 2026 斑马QAQ · 个人博客</span>
-        <a href="https://github.com/" target="_blank" rel="noopener">GITHUB ↗</a>
+        <a href="https://github.com/shimian11" target="_blank" rel="noopener">GITHUB ↗</a>
       </div>
     </footer>
   </div>
