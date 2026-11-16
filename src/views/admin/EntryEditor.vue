@@ -10,8 +10,10 @@
         <div class="spacer"></div>
         <span class="state-chip">样式 <b id="styleChip">{{ pages.length }}</b> 个 · 编辑中·未保存</span>
         <button class="btn" @click="onCancel">取消</button>
-        <button class="btn" :disabled="saving" @click="save('DRAFT')">存为草稿</button>
-        <button class="btn primary" :disabled="saving" @click="save('PUBLISHED')">发布</button>
+        <!-- 状态由右侧「发布设置」的开关决定，这里只保留一个保存动作，避免重复入口 -->
+        <button class="btn primary" :disabled="saving" @click="save(status)">
+          {{ status === 'PUBLISHED' ? '发布' : '存为草稿' }}
+        </button>
       </div>
     </header>
 
@@ -163,19 +165,19 @@
                 @click="toggleStatus"
               ></div>
             </div>
+            <div class="publish-hint">
+              {{
+                status === 'PUBLISHED'
+                  ? '保存后立即出现在前台；关闭开关再保存即转为草稿。'
+                  : '保存后仅自己可见；打开开关再保存即发布。'
+              }}
+            </div>
             <div class="publish-row"><span class="k">样式版本数</span><span class="v">{{ pages.length }}（分页）</span></div>
             <div class="publish-row">
               <span class="k">当前样式校验</span>
               <span class="v" :style="{ color: displayValid ? 'var(--ok)' : 'var(--accent)' }">
                 {{ displayValid ? '✓ HTML 已填写' : '⚠ 效果图与 HTML 至少一项' }}
               </span>
-            </div>
-            <div class="actions">
-              <button class="btn" style="height: 42px" :disabled="saving" @click="save('DRAFT')">存为草稿</button>
-              <button class="btn primary" style="height: 42px" :disabled="saving" @click="save('PUBLISHED')">发布</button>
-              <button v-if="isEdit && status === 'PUBLISHED'" class="btn" style="height: 42px" @click="unpublish">
-                转为草稿（下架）
-              </button>
             </div>
           </div>
         </div>
@@ -364,13 +366,10 @@ function onCancel(): void {
 async function save(targetStatus: EntryStatus): Promise<void> {
   if (!validate()) return
   saving.value = true
-  let changedCount = 0
   try {
     for (const p of pages.value) {
-      // 已发布的分页不因“存为草稿”而降级（下架请用专属按钮 unpublish）；
-      // 其余情况（新分页 / 草稿分页）按本次按钮意图设置状态。
-      const keepPublished = p.id !== undefined && p.status === 'PUBLISHED' && targetStatus === 'DRAFT'
-      const appliedStatus = keepPublished ? 'PUBLISHED' : targetStatus
+      // 分页状态与开关保持一致：开关打开即发布，关闭即转为草稿
+      const appliedStatus = targetStatus
       const summary = p.scene.trim() ? `${form.summary.trim()}\n适用场景：${p.scene.trim()}` : form.summary.trim()
       const payload: Partial<Entry> = {
         title: form.title.trim(),
@@ -386,29 +385,18 @@ async function save(targetStatus: EntryStatus): Promise<void> {
       }
       if (p.id) await updateEntry(p.id, payload)
       else await createEntry(payload)
-      if (appliedStatus === targetStatus) changedCount++
       p.status = appliedStatus
     }
     status.value = targetStatus
     ElMessage.success(
       targetStatus === 'PUBLISHED'
-        ? `已发布 ${changedCount} 个案例`
-        : changedCount > 0
-          ? `已存为草稿 ${changedCount} 个案例${pages.value.length > changedCount ? `，另有 ${pages.value.length - changedCount} 个已发布案例保持不变` : ''}`
-          : '无新内容待存为草稿',
+        ? `已发布 ${pages.value.length} 个案例`
+        : `已存为草稿 ${pages.value.length} 个案例`,
     )
     router.push({ name: 'admin-entry-list' })
   } finally {
     saving.value = false
   }
-}
-
-async function unpublish(): Promise<void> {
-  if (!isEdit.value) return
-  await updateEntry(entryId.value as number, { status: 'DRAFT' })
-  status.value = 'DRAFT'
-  ElMessage.success('已转为草稿（下架）')
-  router.push({ name: 'admin-entry-list' })
 }
 
 onMounted(async () => {
@@ -1027,10 +1015,11 @@ onMounted(async () => {
   left: 18px;
 }
 
-.actions {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
+.publish-hint {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  line-height: 1.7;
+  margin: 8px 0 4px;
 }
 
 .help {

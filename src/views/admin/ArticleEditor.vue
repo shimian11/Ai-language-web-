@@ -10,9 +10,14 @@
         </div>
       </div>
       <div class="ae-bar-actions">
-        <el-button round :loading="saving" @click="save('DRAFT')">存为草稿</el-button>
-        <el-button type="primary" round :loading="saving" @click="save('PUBLISHED')">
-          发布
+        <!-- 状态由右侧「发布设置」的开关决定，这里只保留一个保存动作，避免重复入口 -->
+        <el-button
+          type="primary"
+          round
+          :loading="saving"
+          @click="save(publishOn ? 'PUBLISHED' : 'DRAFT')"
+        >
+          {{ publishOn ? '发布' : '存为草稿' }}
         </el-button>
       </div>
     </header>
@@ -201,18 +206,31 @@
                 <div>
                   <div class="ae-pub-state">{{ publishOn ? '发布' : '草稿' }}</div>
                   <div class="ae-hint">
-                    {{ publishOn ? '保存后立即出现在前台对应栏目。' : '当前为草稿：仅自己可见。' }}
+                    {{ publishOn ? '保存后立即出现在前台对应栏目。' : '保存后仅自己可见，可稍后再发布。' }}
                   </div>
                 </div>
               </div>
-              <div class="ae-pub-actions">
-                <el-button round :loading="saving" @click="save('DRAFT')">存为草稿</el-button>
-                <el-button type="primary" round :loading="saving" @click="save('PUBLISHED')">
-                  发布
-                </el-button>
-              </div>
+              <!-- 右侧信息行：填满面板，同时把保存前需要确认的字段集中展示 -->
+              <dl class="ae-pub-meta">
+                <div>
+                  <dt>内容类型</dt>
+                  <dd>{{ meta.label }}</dd>
+                </div>
+                <div>
+                  <dt>{{ form.type === 'internship' ? '所属公司' : '栏目' }}</dt>
+                  <dd>{{ topicText }}</dd>
+                </div>
+                <div>
+                  <dt>展示日期</dt>
+                  <dd>{{ form.displayDate || '未填写' }}</dd>
+                </div>
+                <div>
+                  <dt>正文</dt>
+                  <dd>{{ bodyChars }} 字</dd>
+                </div>
+              </dl>
               <div class="ae-hint" style="margin-top: 14px">
-                草稿仅自己可见；下架请在对应管理页操作。
+                开关决定保存后的状态；下架请在对应管理页操作。
               </div>
             </div>
           </section>
@@ -221,9 +239,6 @@
             <div class="ae-panel-head"><span class="ae-panel-title">本文将展示在</span></div>
             <div class="ae-panel-body">
               <div class="ae-hint">{{ meta.destination }}</div>
-              <div class="ae-hint" style="margin-top: 10px">
-                当前状态：{{ form.status === 'PUBLISHED' ? '已发布' : '草稿' }}
-              </div>
             </div>
           </section>
         </aside>
@@ -295,6 +310,16 @@ let hydrating = false
 
 /** 正文预览 HTML */
 const previewHtml = computed(() => renderMarkdown(form.body))
+
+/** 正文字数（去掉空白），用于发布设置信息行 */
+const bodyChars = computed(() => form.body.replace(/\s+/g, '').length)
+
+/** 挂载位置文案：实习显示公司别名，其余显示栏目名 */
+const topicText = computed(() =>
+  form.type === 'internship'
+    ? (companies.value.find((c) => c.key === form.companyKey)?.name ?? '未选择公司')
+    : topicLabel(form.type, form.topic),
+)
 
 /** 本地日期 yyyy-MM-dd（避免 toISOString 的时区偏移） */
 function today(): string {
@@ -410,7 +435,8 @@ async function init(): Promise<void> {
       form.topic = ARTICLE_TOPICS[form.type][0]?.key ?? ''
       form.displayDate = form.type === 'internship' ? '' : today()
       form.status = 'DRAFT'
-      publishOn.value = true
+      // 新建默认草稿：开关关闭，避免点一次保存就直接发布
+      publishOn.value = false
     }
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '加载失败')
@@ -761,7 +787,7 @@ onMounted(init)
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .ae-switch {
@@ -803,10 +829,35 @@ onMounted(init)
   font-weight: 600;
 }
 
-.ae-pub-actions {
+/* 发布设置里的信息行：占满面板下部，避免右侧留白过多 */
+.ae-pub-meta {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+  display: grid;
+  gap: 9px;
+}
+
+.ae-pub-meta > div {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ae-pub-meta dt {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+.ae-pub-meta dd {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink);
+  text-align: right;
+  word-break: break-all;
 }
 
 .ae-empty {
