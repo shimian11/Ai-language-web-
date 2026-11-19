@@ -4,7 +4,7 @@
     <div class="am-head">
       <div>
         <h1>实习管理</h1>
-        <p>共 {{ all.length }} 篇记录 · 按公司折叠分组 · 公司名脱敏</p>
+        <p>共 {{ all.length }} 篇记录 · 按公司折叠分组 · 默认折叠 · 公司名脱敏</p>
       </div>
       <div class="am-head-ops">
         <button class="am-btn ghost" type="button" @click="openNodePanel">
@@ -29,10 +29,13 @@
       </div>
 
       <div class="am-tabs">
-        <button type="button" class="am-tab" :class="{ on: sortDir === 'desc' }" @click="sortDir = 'desc'">
+        <button type="button" class="am-tab" :class="{ on: sortMode === 'manual' }" @click="sortMode = 'manual'">
+          手动顺序
+        </button>
+        <button type="button" class="am-tab" :class="{ on: sortMode === 'desc' }" @click="sortMode = 'desc'">
           最新优先
         </button>
-        <button type="button" class="am-tab" :class="{ on: sortDir === 'asc' }" @click="sortDir = 'asc'">
+        <button type="button" class="am-tab" :class="{ on: sortMode === 'asc' }" @click="sortMode = 'asc'">
           最早优先
         </button>
       </div>
@@ -43,12 +46,33 @@
       <input v-model="keyword" class="am-search" type="search" placeholder="搜索记录标题…" />
     </div>
 
+    <div v-if="selectedIds.size" class="am-batch">
+      <span>已选 <b>{{ selectedIds.size }}</b> 篇</span>
+      <button class="am-btn ghost" type="button" :disabled="batchSaving" @click="batchStatus('PUBLISHED')">
+        批量上架
+      </button>
+      <button class="am-btn ghost" type="button" :disabled="batchSaving" @click="batchStatus('DRAFT')">
+        批量下架
+      </button>
+      <div class="am-spacer"></div>
+      <button class="am-btn ghost" type="button" @click="clearSelection">清空选择</button>
+    </div>
+
     <div class="am-panel-wrap">
       <div class="am-panel">
         <table class="am-table">
           <thead>
             <tr>
-              <th style="width: 50%">记录</th>
+              <th style="width: 42px">
+                <input
+                  class="am-cb"
+                  type="checkbox"
+                  :checked="allVisibleSelected"
+                  :indeterminate.prop="someVisibleSelected"
+                  @change="toggleSelectAll(($event.target as HTMLInputElement).checked)"
+                />
+              </th>
+              <th style="width: 46%">记录</th>
               <th>时间点</th>
               <th>状态</th>
               <th style="text-align: right">操作</th>
@@ -56,22 +80,114 @@
           </thead>
           <tbody>
             <template v-for="g in groups" :key="g.key">
-              <tr class="am-group-row" :class="{ open: isOpen(g.key) }">
-                <td colspan="4">
-                  <button type="button" class="am-g-toggle" @click="toggleGroup(g.key)">
-                    <span class="am-chevron">▶</span>
-                    <b>{{ g.name }}</b>
-                    <span v-if="g.meta" class="am-g-tag">{{ g.meta }}</span>
-                    <span v-if="g.milestone" class="am-g-tag">里程碑</span>
-                    <span class="am-g-count">{{ g.items.length }} 篇</span>
-                    <span class="am-g-latest">最近更新 {{ g.latest || '—' }}</span>
-                  </button>
+              <tr
+                class="am-group-row"
+                :class="{
+                  open: isOpen(g.key),
+                  dragging: dragState?.type === 'group' && dragState?.key === g.key,
+                  'drop-target': dropTarget === `group:${g.key}`,
+                }"
+                @dragover.prevent="onGroupDragOver(g.key)"
+                @dragleave="onGroupDragLeave(g.key)"
+                @drop.prevent="onGroupDrop(g.key)"
+              >
+                <td colspan="5">
+                  <div class="am-g-head">
+                    <span
+                      class="am-drag"
+                      draggable="true"
+                      title="拖动排序，或使用 ↑↓"
+                      @dragstart="onGroupDragStart($event, g.key)"
+                      @dragend="clearDrag"
+                      >⠿</span
+                    >
+                    <input
+                      class="am-cb"
+                      type="checkbox"
+                      :checked="isGroupAllSelected(g)"
+                      :indeterminate.prop="isGroupSomeSelected(g)"
+                      @change="toggleGroupSelection(g, ($event.target as HTMLInputElement).checked)"
+                    />
+                    <button type="button" class="am-g-toggle" @click="toggleGroup(g.key)">
+                      <span class="am-chevron">▶</span>
+                      <b>{{ g.name }}</b>
+                      <span v-if="g.meta" class="am-g-tag">{{ g.meta }}</span>
+                      <span v-if="g.milestone" class="am-g-tag">里程碑</span>
+                      <span class="am-g-count">{{ g.items.length }} 篇</span>
+                      <span class="am-g-latest">最近更新 {{ g.latest || '—' }}</span>
+                    </button>
+                    <div class="am-order">
+                      <button class="am-btn ghost" type="button" title="上移分组" @click.stop="moveGroup(g.key, -1)">
+                        ↑
+                      </button>
+                      <button class="am-btn ghost" type="button" title="下移分组" @click.stop="moveGroup(g.key, 1)">
+                        ↓
+                      </button>
+                    </div>
+                    <div class="am-g-batch">
+                      <button
+                        class="am-btn ghost"
+                        type="button"
+                        :disabled="batchSaving"
+                        @click.stop="batchGroupStatus(g, 'PUBLISHED')"
+                      >
+                        批量上架
+                      </button>
+                      <button
+                        class="am-btn ghost"
+                        type="button"
+                        :disabled="batchSaving"
+                        @click.stop="batchGroupStatus(g, 'DRAFT')"
+                      >
+                        批量下架
+                      </button>
+                    </div>
+                  </div>
                 </td>
               </tr>
-              <tr v-for="a in g.items" v-show="isOpen(g.key)" :key="a.id">
+              <tr
+                v-for="a in g.items"
+                v-show="isOpen(g.key)"
+                :key="a.id"
+                :class="{
+                  dragging: dragState?.type === 'item' && dragState?.id === a.id,
+                  'drop-target': dropTarget === `item:${a.id}`,
+                }"
+                @dragover.prevent="onItemDragOver(g, a)"
+                @dragleave="onItemDragLeave(a.id)"
+                @drop.prevent="onItemDrop(g, a)"
+              >
                 <td>
-                  <div class="am-title">{{ a.title }}</div>
-                  <span class="am-sub">{{ a.summary }}</span>
+                  <input
+                    class="am-cb"
+                    type="checkbox"
+                    :checked="selectedIds.has(a.id)"
+                    @change="toggleSelect(a.id, ($event.target as HTMLInputElement).checked)"
+                  />
+                </td>
+                <td>
+                  <div class="am-row-title">
+                    <span
+                      class="am-drag"
+                      draggable="true"
+                      title="拖动排序，或使用 ↑↓"
+                      @dragstart="onItemDragStart($event, g.key, a.id)"
+                      @dragend="clearDrag"
+                      >⠿</span
+                    >
+                    <div class="am-order">
+                      <button class="am-btn ghost" type="button" title="上移" @click.stop.prevent="moveItem(g.key, a.id, -1)">
+                        ↑
+                      </button>
+                      <button class="am-btn ghost" type="button" title="下移" @click.stop.prevent="moveItem(g.key, a.id, 1)">
+                        ↓
+                      </button>
+                    </div>
+                    <div>
+                      <div class="am-title">{{ a.title }}</div>
+                      <span class="am-sub">{{ a.summary }}</span>
+                    </div>
+                  </div>
                 </td>
                 <td class="am-date">{{ a.date || '—' }}</td>
                 <td>
@@ -97,7 +213,7 @@
               </tr>
             </template>
             <tr v-if="!groups.length">
-              <td colspan="4" class="am-empty">
+              <td colspan="5" class="am-empty">
                 {{ loading ? '正在加载…' : '没有符合条件的记录' }}
               </td>
             </tr>
@@ -106,7 +222,7 @@
         <div class="am-foot">
           <span>
             当前显示 <b>{{ shownCount }}</b> 篇 · 共 <b>{{ all.length }}</b> 篇 · 排序：<b>{{
-              sortDir === 'desc' ? '最新优先' : '最早优先'
+              sortMode === 'manual' ? '手动顺序' : sortMode === 'desc' ? '最新优先' : '最早优先'
             }}</b>
           </span>
           <span>公司名均为脱敏别名</span>
@@ -187,6 +303,7 @@ import {
   pageArticles,
   removeArticle,
   removeCompany,
+  updateArticleOrder,
   updateArticleStatus,
   updateCompany,
 } from '@/api/article'
@@ -201,16 +318,34 @@ const all = ref<Article[]>([])
 const companies = ref<CompanyItem[]>([])
 const loading = ref(true)
 
-/** 状态筛选、排序方向、关键词 */
+/** 状态筛选、排序模式、关键词 */
+type SortMode = 'manual' | 'desc' | 'asc'
 const status = ref<'all' | EntryStatus>('all')
-const sortDir = ref<'desc' | 'asc'>('desc')
+const sortMode = ref<SortMode>('manual')
 const keyword = ref('')
 
-/** 折叠状态：key → 是否展开（默认只展开第一组，与原型一致） */
+/** 折叠状态：key → 是否展开；默认全部折叠 */
 const openMap = reactive<Record<string, boolean>>({})
+
+/** 勾选与批量 */
+const selectedIds = ref<Set<number>>(new Set())
+const batchSaving = ref(false)
+
+/** 全量手动顺序（跨分组连续，存后端 sort） */
+const manualOrder = ref<number[]>([])
+const savingOrder = ref(false)
 
 /** 未分组记录的虚拟分组标识 */
 const UNGROUPED = '__none'
+
+function groupKeyOf(a: Article): string {
+  return a.company || UNGROUPED
+}
+
+function orderIndex(id: number): number {
+  const i = manualOrder.value.indexOf(id)
+  return i === -1 ? Number.MAX_SAFE_INTEGER : i
+}
 
 interface Group {
   key: string
@@ -231,7 +366,7 @@ const statusTabs = computed(() => {
   ]
 })
 
-/** 按公司分组（状态/关键词筛选后），组内按展示日期排序 */
+/** 按公司分组（状态/关键词筛选后），组内与分组都支持手动顺序 */
 const groups = computed<Group[]>(() => {
   const kw = keyword.value.trim()
   const visible = all.value.filter((a) => {
@@ -240,7 +375,6 @@ const groups = computed<Group[]>(() => {
     return okStatus && okKw
   })
 
-  // 公司顺序以 company.sort 为准，未挂公司的记录归入「未分组」
   const result: Group[] = []
   for (const co of companies.value) {
     const items = visible.filter((a) => a.company === co.key)
@@ -251,7 +385,7 @@ const groups = computed<Group[]>(() => {
       meta: co.meta ?? '',
       milestone: Boolean(co.milestone),
       items,
-      latest: items[0]?.date ?? '',
+      latest: '',
     })
   }
   const ungrouped = visible.filter((a) => !a.company)
@@ -262,7 +396,28 @@ const groups = computed<Group[]>(() => {
       meta: '',
       milestone: false,
       items: ungrouped,
-      latest: ungrouped[0]?.date ?? '',
+      latest: '',
+    })
+  }
+
+  for (const g of result) {
+    if (sortMode.value === 'manual') {
+      g.items.sort((a, b) => orderIndex(a.id) - orderIndex(b.id))
+    } else {
+      g.items.sort((a, b) => {
+        const da = a.date || ''
+        const db = b.date || ''
+        return sortMode.value === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
+      })
+    }
+    g.latest = g.items.reduce((max, a) => (a.date > max ? a.date : max), '')
+  }
+
+  if (sortMode.value === 'manual') {
+    result.sort((a, b) => {
+      const ia = Math.min(...a.items.map((item) => orderIndex(item.id)))
+      const ib = Math.min(...b.items.map((item) => orderIndex(item.id)))
+      return ia - ib
     })
   }
   return result
@@ -290,20 +445,224 @@ function toggleAll(): void {
   for (const g of groups.value) openMap[g.key] = next
 }
 
+/* ===== 勾选与批量 ===== */
+const allVisibleSelected = computed(() => {
+  const visible = groups.value.flatMap((g) => g.items)
+  return visible.length > 0 && visible.every((a) => selectedIds.value.has(a.id))
+})
+const someVisibleSelected = computed(() => {
+  const visible = groups.value.flatMap((g) => g.items)
+  return visible.some((a) => selectedIds.value.has(a.id)) && !allVisibleSelected.value
+})
+
+function isGroupAllSelected(g: Group): boolean {
+  return g.items.length > 0 && g.items.every((a) => selectedIds.value.has(a.id))
+}
+function isGroupSomeSelected(g: Group): boolean {
+  return g.items.some((a) => selectedIds.value.has(a.id)) && !isGroupAllSelected(g)
+}
+function toggleSelect(id: number, checked: boolean): void {
+  const next = new Set(selectedIds.value)
+  if (checked) next.add(id)
+  else next.delete(id)
+  selectedIds.value = next
+}
+function toggleGroupSelection(g: Group, checked: boolean): void {
+  const next = new Set(selectedIds.value)
+  for (const a of g.items) {
+    if (checked) next.add(a.id)
+    else next.delete(a.id)
+  }
+  selectedIds.value = next
+}
+function toggleSelectAll(checked: boolean): void {
+  const next = new Set(selectedIds.value)
+  for (const a of groups.value.flatMap((g) => g.items)) {
+    if (checked) next.add(a.id)
+    else next.delete(a.id)
+  }
+  selectedIds.value = next
+}
+function clearSelection(): void {
+  selectedIds.value = new Set()
+}
+
+async function batchStatus(target: EntryStatus, ids?: number[]): Promise<void> {
+  const list = ids ?? [...selectedIds.value]
+  if (!list.length) return
+  batchSaving.value = true
+  try {
+    await Promise.all(list.map((id) => updateArticleStatus(id, target)))
+    ElMessage.success(target === 'PUBLISHED' ? `已批量上架 ${list.length} 篇` : `已批量下架 ${list.length} 篇`)
+    clearSelection()
+    await load()
+  } finally {
+    batchSaving.value = false
+  }
+}
+function batchGroupStatus(g: Group, target: EntryStatus): void {
+  const ids = all.value.filter((a) => groupKeyOf(a) === g.key).map((a) => a.id)
+  void batchStatus(target, ids)
+}
+
+/* ===== 手动排序 ===== */
+async function persistOrder(): Promise<void> {
+  if (savingOrder.value) return
+  savingOrder.value = true
+  try {
+    await updateArticleOrder(manualOrder.value)
+    const sortMap = new Map(manualOrder.value.map((id, i) => [id, (i + 1) * 10]))
+    all.value = all.value.map((a) => ({ ...a, sort: sortMap.get(a.id) ?? a.sort }))
+    ElMessage.success('顺序已保存')
+  } catch {
+    await load()
+  } finally {
+    savingOrder.value = false
+  }
+}
+
+function applyServerOrder(): void {
+  const sorted = [...all.value].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.id - b.id)
+  manualOrder.value = sorted.map((a) => a.id)
+}
+
+function moveGroup(key: string, dir: -1 | 1): void {
+  const blocks: Array<{ key: string; ids: number[] }> = []
+  const indexByKey = new Map<string, number>()
+  for (const id of manualOrder.value) {
+    const article = all.value.find((a) => a.id === id)
+    if (!article) continue
+    const k = groupKeyOf(article)
+    if (!indexByKey.has(k)) {
+      indexByKey.set(k, blocks.length)
+      blocks.push({ key: k, ids: [] })
+    }
+    blocks[indexByKey.get(k)!].ids.push(id)
+  }
+  const i = blocks.findIndex((b) => b.key === key)
+  const j = i + dir
+  if (i === -1 || j < 0 || j >= blocks.length) return
+  const tmp = blocks[i]
+  blocks[i] = blocks[j]
+  blocks[j] = tmp
+  manualOrder.value = blocks.flatMap((b) => b.ids)
+  sortMode.value = 'manual'
+  void persistOrder()
+}
+
+function moveItem(key: string, id: number, dir: -1 | 1): void {
+  const ids = manualOrder.value.filter((x) => {
+    const a = all.value.find((item) => item.id === x)
+    return a !== undefined && groupKeyOf(a) === key
+  })
+  const i = ids.indexOf(id)
+  const j = i + dir
+  if (i === -1 || j < 0 || j >= ids.length) return
+  const a = manualOrder.value.indexOf(ids[i])
+  const b = manualOrder.value.indexOf(ids[j])
+  const next = [...manualOrder.value]
+  const tmp = next[a]
+  next[a] = next[b]
+  next[b] = tmp
+  manualOrder.value = next
+  sortMode.value = 'manual'
+  void persistOrder()
+}
+
+/* ===== 拖拽 ===== */
+interface DragState {
+  type: 'group' | 'item'
+  key: string
+  id?: number
+}
+const dragState = ref<DragState | null>(null)
+const dropTarget = ref<string | null>(null)
+
+function clearDrag(): void {
+  dragState.value = null
+  dropTarget.value = null
+}
+function onGroupDragStart(e: DragEvent, key: string): void {
+  dragState.value = { type: 'group', key }
+  e.dataTransfer?.setData('text/plain', key)
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+}
+function onGroupDragOver(key: string): void {
+  if (dragState.value?.type === 'group' && dragState.value.key !== key) dropTarget.value = `group:${key}`
+}
+function onGroupDragLeave(key: string): void {
+  if (dropTarget.value === `group:${key}`) dropTarget.value = null
+}
+function onGroupDrop(key: string): void {
+  const drag = dragState.value
+  if (!drag || drag.type !== 'group' || drag.key === key) {
+    clearDrag()
+    return
+  }
+  const idsOf = (k: string) => new Set(all.value.filter((a) => groupKeyOf(a) === k).map((a) => a.id))
+  const moving = idsOf(drag.key)
+  const block = manualOrder.value.filter((id) => moving.has(id))
+  const rest = manualOrder.value.filter((id) => !moving.has(id))
+  const target = idsOf(key)
+  const at = rest.findIndex((id) => target.has(id))
+  manualOrder.value = at === -1 ? [...rest, ...block] : [...rest.slice(0, at), ...block, ...rest.slice(at)]
+  sortMode.value = 'manual'
+  void persistOrder()
+  clearDrag()
+}
+function onItemDragStart(e: DragEvent, key: string, id: number): void {
+  dragState.value = { type: 'item', key, id }
+  e.dataTransfer?.setData('text/plain', String(id))
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+}
+function onItemDragOver(g: Group, a: Article): void {
+  const drag = dragState.value
+  if (!drag || drag.type !== 'item' || drag.key !== g.key || drag.id === a.id) return
+  dropTarget.value = `item:${a.id}`
+}
+function onItemDragLeave(id: number): void {
+  if (dropTarget.value === `item:${id}`) dropTarget.value = null
+}
+function onItemDrop(g: Group, a: Article): void {
+  const drag = dragState.value
+  if (!drag || drag.type !== 'item' || drag.id === undefined) {
+    clearDrag()
+    return
+  }
+  if (drag.key !== g.key) {
+    ElMessage.warning('只能在同一分组内调整顺序')
+    clearDrag()
+    return
+  }
+  if (drag.id === a.id) {
+    clearDrag()
+    return
+  }
+  const from = manualOrder.value.indexOf(drag.id)
+  const to = manualOrder.value.indexOf(a.id)
+  if (from !== -1 && to !== -1) {
+    const next = [...manualOrder.value]
+    next.splice(from, 1)
+    const at = next.indexOf(a.id)
+    next.splice(at === -1 ? next.length : at, 0, drag.id)
+    manualOrder.value = next
+    sortMode.value = 'manual'
+    void persistOrder()
+  }
+  clearDrag()
+}
+
 /** 拉取公司列表与全部实习记录（登录态下含草稿） */
 async function load(): Promise<void> {
   loading.value = true
   try {
     const [co, data] = await Promise.all([
       listCompanies(),
-      pageArticles({ type: 'internship', size: 200 }),
+      pageArticles({ type: 'internship', size: 200, sort: 'manual' }),
     ])
     companies.value = co
     all.value = data.list
-    // 默认只展开第一组
-    groups.value.forEach((g, i) => {
-      if (openMap[g.key] === undefined) openMap[g.key] = i === 0
-    })
+    applyServerOrder()
   } finally {
     loading.value = false
   }
@@ -406,6 +765,8 @@ async function onRemove(a: Article): Promise<void> {
     return
   }
   await removeArticle(a.id)
+  selectedIds.value.delete(a.id)
+  selectedIds.value = new Set(selectedIds.value)
   ElMessage.success('已删除')
   await load()
 }
@@ -440,6 +801,22 @@ onMounted(load)
 
 .am-btn.ghost:hover {
   border-color: var(--ink);
+}
+
+/* 行内排序/批量按钮压到列表尺寸 */
+.am-order .am-btn.ghost,
+.am-g-batch .am-btn.ghost,
+.am-batch .am-btn.ghost {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .am-g-batch .am-btn.ghost {
+    padding: 0 7px;
+    font-size: 10px;
+  }
 }
 
 .am-dot-badge {

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import { getToken } from '@/utils/auth'
+import HomeFaces from '@/views/visitor/HomeFaces.vue'
 
 import type { RouteRecordRaw } from 'vue-router'
 
@@ -21,7 +22,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/layouts/VisitorLayout.vue'),
     children: [
       // 首页：四面景深轮播（提示词 / 心得 / 实习 / 面试）
-      { path: '', name: 'home', component: () => import('@/views/visitor/HomeFaces.vue') },
+      { path: '', name: 'home', component: HomeFaces },
       // 提示词：列表 + 详情（详情沿用 entry 数据源）
       { path: 'prompts', name: 'prompts', component: () => import('@/views/visitor/PromptsList.vue') },
       { path: 'prompts/:id', name: 'prompt-detail', component: () => import('@/views/visitor/EntryDetail.vue') },
@@ -104,6 +105,11 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  // 新页面从顶部开始；浏览器后退时恢复原位置
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0 }
+  },
 })
 
 router.beforeEach((to) => {

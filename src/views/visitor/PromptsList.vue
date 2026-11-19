@@ -44,6 +44,9 @@
         <div class="filter-row">
           <span class="filter-label">排序</span>
           <div class="tabs">
+            <button type="button" :class="{ on: sortDir === 'default' }" @click="sortDir = 'default'">
+              默认顺序
+            </button>
             <button type="button" :class="{ on: sortDir === 'desc' }" @click="sortDir = 'desc'">
               最新优先
             </button>
@@ -64,20 +67,33 @@
           :to="`/prompts/${entry.id}`"
         >
           <div class="thumb">
-            <div class="art-grid"></div>
-            <!-- CSS 微缩示意封面：按标题稳定哈希选一种布局，列表页零 iframe -->
-            <div class="cover">
-              <span
-                v-for="(s, si) in coverShapes(entry.title)"
-                :key="si"
-                :class="s.cls"
-                :style="s.style"
-              ></span>
-            </div>
+            <!-- 有 HTML 源码时直接渲染真实效果（禁用脚本、隐藏滚动条） -->
+            <iframe
+              v-if="entry.htmlSource"
+              class="thumb-frame"
+              :srcdoc="thumbDoc(entry.htmlSource)"
+              scrolling="no"
+              sandbox=""
+              loading="lazy"
+              tabindex="-1"
+              aria-hidden="true"
+            ></iframe>
+            <template v-else>
+              <div class="art-grid"></div>
+              <!-- 无 HTML 时的 CSS 微缩封面：按样式 + id 哈希，保证同组也有区分 -->
+              <div class="cover">
+                <span
+                  v-for="(s, si) in coverShapes(`${entry.style}#${entry.id}`)"
+                  :key="si"
+                  :class="s.cls"
+                  :style="s.style"
+                ></span>
+              </div>
+            </template>
           </div>
           <div class="card-body">
-            <div class="card-cat">{{ catLabel(entry) }}</div>
-            <div class="card-title">{{ entry.title }}</div>
+            <div class="card-cat">{{ entry.title }}</div>
+            <div class="card-title">{{ entry.style }}</div>
             <div class="card-desc">{{ entry.summary }}</div>
             <div class="tags">
               <span
@@ -124,10 +140,10 @@ const platChips = [
   { key: 'general', label: '通用' },
 ] as const
 
-/** 筛选与排序状态 */
+/** 筛选与排序状态（default = 后台手动顺序） */
 const plat = ref<string>('all')
 const keyword = ref('')
-const sortDir = ref<'desc' | 'asc'>('desc')
+const sortDir = ref<'default' | 'desc' | 'asc'>('default')
 /** 当前选中的标签（空串 = 全部） */
 const activeTag = ref('')
 
@@ -167,17 +183,12 @@ const visible = computed<Entry[]>(() => {
           .includes(kw),
     )
     .sort((a, b) => {
+      if (sortDir.value === 'default') return 0
       const da = a.publishedAt ?? a.createdAt
       const db = b.publishedAt ?? b.createdAt
       return sortDir.value === 'asc' ? da.localeCompare(db) : db.localeCompare(da)
     })
 })
-
-/** 卡片归属标注：主标签与样式名相同时不重复显示（标签即分类迁移后大类并入标签会出现同名） */
-function catLabel(entry: Entry): string {
-  const tag = entry.tags[0] || '提示词'
-  return tag === entry.style ? tag : `${tag} · ${entry.style}`
-}
 
 /** 点卡片上的标签 = 直接按该标签筛选并展开更多 */
 function selectTag(tag: string): void {
@@ -191,7 +202,16 @@ function resetFilters(): void {
   activeTag.value = ''
   plat.value = 'all'
   keyword.value = ''
-  sortDir.value = 'desc'
+  sortDir.value = 'default'
+}
+
+/** 卡片封面：把真实 HTML 压成缩略图，自动隐藏滚动条 */
+function thumbDoc(source: string): string {
+  const inject =
+    '<style>html,body{overflow:hidden!important;margin:0!important;background:#FAF9F6}' +
+    'body{zoom:.55;padding:10px!important;min-height:0!important}</style>'
+  // 注入到 head 内，避免 style 出现在 doctype 之前触发怪异模式
+  return source.includes('</head>') ? source.replace('</head>', `${inject}</head>`) : inject + source
 }
 
 /* ---------- CSS 微缩示意封面 ----------
@@ -295,8 +315,8 @@ function onTagRowClick(e: MouseEvent): void {
 onMounted(async () => {
   loading.value = true
   try {
-    // 无 token 时后端强制只返回已发布（见后端 EntryController）
-    const res = await pageEntries({ page: 1, size: 100 })
+    // 显式只取已发布：管理员登录后浏览器会带 token，否则 drafts 也会被返回
+    const res = await pageEntries({ page: 1, size: 200, status: 'PUBLISHED' })
     entries.value = res.list
   } finally {
     loading.value = false
@@ -321,6 +341,32 @@ onMounted(async () => {
   letter-spacing: 0.08em;
   color: var(--ink-3);
   margin: -14px 0 26px;
+}
+/* HTML 缩略封面：真实渲染、无滚动条 */
+.prompt-card .thumb {
+  position: relative;
+  overflow: hidden;
+}
+.thumb-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  pointer-events: none;
+  background: var(--paper-2);
+}
+/* 以具体样式作为卡片大标题 */
+.prompt-card .card-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+.prompt-card .card-cat {
+  margin-bottom: 6px;
 }
 /* 卡片标签可点：筛选该标签 */
 .prompt-card .tag {

@@ -89,6 +89,12 @@ export function removeEntry(id: number): Promise<void> {
   return http.delete(`/entries/${id}`)
 }
 
+/** 手动排序：按传入 ID 顺序重写 sort（后台拖拽） */
+export function updateEntryOrder(ids: number[]): Promise<void> {
+  if (USE_MOCK) return Promise.resolve()
+  return http.put('/entries/sort', { ids })
+}
+
 export function listRelated(id: number): Promise<Entry[]> {
   if (USE_MOCK) return mockRelated(id)
   return http.get<Entry[]>(`/entries/${id}/related`)

@@ -334,3 +334,130 @@
     width: 100%;
   }
 }
+
+/* ===== 列表批量与排序（心得/实习/面试共用） ===== */
+.am-cb {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--red);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.am-drag {
+  cursor: grab;
+  user-select: none;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px;
+  flex: 0 0 auto;
+}
+.am-drag:active {
+  cursor: grabbing;
+}
+.am-order {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.am-order .am-btn {
+  height: 24px;
+  padding: 0 7px;
+  font-size: 11px;
+  line-height: 1;
+}
+.am-g-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 10px;
+}
+.am-g-head .am-g-toggle {
+  width: auto;
+  flex: 1;
+  padding: 9px 6px;
+}
+.am-g-head .am-g-toggle:hover {
+  background: transparent;
+}
+.am-g-batch {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.am-g-batch .am-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+.am-row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.am-batch {
+  margin: 0 32px 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 26%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 5%, var(--paper-2));
+  font-size: 12px;
+}
+.am-batch b {
+  color: var(--red);
+}
+.am-batch .am-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+.am-table tr.dragging {
+  opacity: 0.4;
+}
+.am-table tr.drop-target {
+  background: rgba(192, 57, 43, 0.06);
+}
+.am-table tr.drop-target td {
+  border-top: 2px solid var(--red);
+}
+@media (max-width: 760px) {
+  .am-g-batch .am-btn {
+    padding: 0 7px;
+    font-size: 10px;
+  }
+  .am-g-latest {
+    display: none;
+  }
+  .am-batch {
+    margin: 0 16px 12px;
+    flex-wrap: wrap;
+  }
+}
+
+/* 通用小按钮（文章管理列表使用） */
+.am-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: 0.15s;
+  white-space: nowrap;
+}
+.am-btn:hover {
+  border-color: var(--ink);
+}
+.am-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

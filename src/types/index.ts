@@ -51,6 +51,8 @@ export interface Entry {
   images: EntryImage[]
   tags: string[]
   status: EntryStatus
+  /** 手动排序值（小者靠前，后台拖拽维护） */
+  sort?: number
   publishedAt?: string
   createdAt: string
   viewCount?: number
@@ -94,6 +96,8 @@ export interface Article {
   result?: string
   resultClass?: 'ok' | 'warn' | 'fail'
   status: EntryStatus
+  /** 手动排序值（小者靠前，后台拖拽维护） */
+  sort?: number
   /** 阅读时长标注（如「6 分钟」） */
   read: string
   /** 首次发布日期（yyyy-MM-dd；未发布为空） */

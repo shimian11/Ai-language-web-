@@ -22,7 +22,7 @@ export interface ArticlePageParams {
   /** 公司 key（仅实习记录） */
   companyKey?: string
   /** 按展示日期排序方向 */
-  sort?: 'asc' | 'desc'
+  sort?: 'asc' | 'desc' | 'manual'
 }
 
 /** 新建 / 更新入参（覆盖式） */
@@ -95,6 +95,11 @@ export function updateArticle(id: number, data: ArticleSavePayload): Promise<Art
 /** 发布 / 下架 */
 export function updateArticleStatus(id: number, status: EntryStatus): Promise<void> {
   return http.put(`/articles/${id}/status`, { status })
+}
+
+/** 手动排序：按传入 ID 顺序重写 sort（后台拖拽/上下移） */
+export function updateArticleOrder(ids: number[]): Promise<void> {
+  return http.put('/articles/sort', { ids })
 }
 
 /** 删除文章 */

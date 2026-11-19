@@ -23,9 +23,9 @@
 
         <!-- 头部：标题 + 收藏按钮同行 -->
         <div class="article-head" style="border: 0; padding-top: 0; margin-bottom: 14px">
-          <div class="kicker">{{ primaryTag }} · {{ entry.style }}</div>
+          <div class="kicker">{{ primaryTag }} · {{ entry.title }}</div>
           <div class="title-row">
-            <h1 class="article-title">{{ entry.title }}</h1>
+            <h1 class="article-title">{{ entry.style }}</h1>
             <button
               class="fav-btn"
               :class="{ on: isFav }"
@@ -116,10 +116,10 @@
                     class="rel-item"
                     :to="`/prompts/${item.id}`"
                   >
-                    <Thumb :src="item.images[0]?.url ?? ''" :text="item.title" class="rel-thumb" />
+                    <Thumb :src="item.images[0]?.url ?? ''" :text="item.style" class="rel-thumb" />
                     <div>
-                      <div class="t">{{ item.title }}</div>
-                      <div class="c">{{ item.tags.slice(0, 2).join(' / ') || item.style }} · {{ item.style }}</div>
+                      <div class="t">{{ item.style }}</div>
+                      <div class="c">{{ item.title }} · {{ item.tags.slice(0, 2).join(' / ') || '提示词' }}</div>
                     </div>
                   </RouterLink>
                 </div>

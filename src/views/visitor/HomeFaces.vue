@@ -3,10 +3,10 @@
   <div class="home-page visitor-page">
     <!-- 背景视差层：光斑与网格随切换位移，制造纵深 -->
     <div class="backdrop" aria-hidden="true">
-      <div ref="blob1" class="blob b1"></div>
-      <div ref="blob2" class="blob b2"></div>
-      <div ref="blob3" class="blob b3"></div>
-      <div ref="gridBg" class="grid-bg"></div>
+      <div class="blob b1" :style="{ '--px': `${-index * 18}px` }"></div>
+      <div class="blob b2" :style="{ '--px': `${-index * 28}px` }"></div>
+      <div class="blob b3" :style="{ '--px': `${-index * 38}px` }"></div>
+      <div class="grid-bg" :style="{ '--gx': `${-index * 26}px` }"></div>
     </div>
 
     <main class="stage-wrap">
@@ -31,6 +31,7 @@
             :ref="(el) => setFaceRef(el, i)"
             class="face"
             :class="{ 'is-active': i === index }"
+            :style="faceStyle(i)"
             :aria-hidden="i === index ? 'false' : 'true'"
           >
             <div class="card">
@@ -106,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeMount, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useFaceWheel } from '@/composables/useFaceWheel'
@@ -178,20 +179,19 @@ const faces: FaceConfig[] = [
  */
 const DEPTH = [
   { x: 0, s: 1, z: 0, o: 1, b: 1, sat: 1, blur: 0, ry: 0 },
-  { x: 84, s: 0.72, z: -280, o: 0.55, b: 0.62, sat: 0.8, blur: 2.6, ry: -16 },
-  { x: 142, s: 0.6, z: -460, o: 0.16, b: 0.45, sat: 0.6, blur: 5, ry: -24 },
-  { x: 190, s: 0.52, z: -620, o: 0, b: 0.4, sat: 0.5, blur: 6, ry: -30 },
+  { x: 84, s: 0.72, z: -280, o: 0.55, b: 0.62, sat: 0.8, blur: 2.4, ry: -16 },
+  { x: 142, s: 0.6, z: -460, o: 0.16, b: 0.45, sat: 0.6, blur: 3.5, ry: -24 },
+  { x: 190, s: 0.52, z: -620, o: 0, b: 0.4, sat: 0.5, blur: 0, ry: -30 },
 ]
+
+/** 非当前卡的纸色遮罩强度（与模糊叠加，形成「退到背景里」的景深感） */
+const VEIL = [0, 0.18, 0.45, 0.7]
 
 const router = useRouter()
 
 /* ---------- 模板引用 ---------- */
 const stageRef = ref<HTMLElement | null>(null)
 const deckRef = ref<HTMLElement | null>(null)
-const blob1 = ref<HTMLElement | null>(null)
-const blob2 = ref<HTMLElement | null>(null)
-const blob3 = ref<HTMLElement | null>(null)
-const gridBg = ref<HTMLElement | null>(null)
 const faceEls: (HTMLElement | null)[] = []
 
 /** 函数式 ref：收集四个面元素 */
@@ -200,9 +200,30 @@ function setFaceRef(el: unknown, i: number): void {
 }
 
 /* ---------- 交互状态 ---------- */
-/* index 必须是响应式：模板的 is-active / aria-hidden 都绑定它。
-   此前用 let 非响应式变量，卡片 CSS 变量在动但高亮/流光永远停在第一张。 */
 const index = ref(0)
+
+/**
+ * 由 index 直接算出景深变量，首屏第一次渲染就在正确位置。
+ * 旧实现等 onMounted 后才写 CSS 变量，首帧四张卡会叠在中心再散开，造成首屏卡顿。
+ */
+function faceStyle(i: number): Record<string, string> {
+  const off = i - index.value
+  const abs = Math.abs(off)
+  const d = DEPTH[Math.min(abs, 3)]
+  const dir = Math.sign(off)
+  return {
+    '--x': String(d.x * dir),
+    '--s': String(d.s),
+    '--z': `${d.z}px`,
+    '--o': abs > 3 ? '0' : String(d.o),
+    '--b': String(d.b),
+    '--sat': String(d.sat),
+    '--blur': `${d.blur}px`,
+    '--ry': `${d.ry * dir}deg`,
+    '--veil': abs > 3 ? '0.92' : String(VEIL[Math.min(abs, 3)]),
+  }
+}
+
 let dragPx = 0
 let startX = 0
 let dragging = false
@@ -210,34 +231,9 @@ let moved = false
 let captured = false
 let tiltRaf = 0
 
-/** 应用当前 index 的景深与视差 */
-function render(): void {
-  const cur = index.value
-  faceEls.forEach((el, i) => {
-    if (!el) return
-    const off = i - cur
-    const abs = Math.abs(off)
-    const d = DEPTH[Math.min(abs, 3)]
-    const dir = Math.sign(off)
-    el.style.setProperty('--x', String(d.x * dir))
-    el.style.setProperty('--s', String(d.s))
-    el.style.setProperty('--z', `${d.z}px`)
-    el.style.setProperty('--o', abs > 3 ? '0' : String(d.o))
-    el.style.setProperty('--b', String(d.b))
-    el.style.setProperty('--sat', String(d.sat))
-    el.style.setProperty('--blur', `${d.blur}px`)
-    el.style.setProperty('--ry', `${d.ry * dir}deg`)
-  })
-  // 背景视差：每个光斑位移幅度不同，网格同步
-  const shifts = [blob1.value, blob2.value, blob3.value]
-  shifts.forEach((b, i) => b?.style.setProperty('--px', `${-cur * (18 + i * 10)}px`))
-  gridBg.value?.style.setProperty('--gx', `${-cur * 26}px`)
-}
-
 /** 跳到指定面（带边界收敛） */
 function go(next: number): void {
   index.value = Math.max(0, Math.min(faces.length - 1, next))
-  render()
 }
 /** 步进 ±1 */
 function step(dir: number): void {
@@ -291,7 +287,6 @@ function onUp(): void {
     f?.style.setProperty('--drag', '0')
   })
   deckRef.value?.style.setProperty('--deck-ry', '0deg')
-  render()
 }
 
 /* ---------- 生命周期挂载 / 卸载 ---------- */
@@ -305,6 +300,8 @@ function onTilt(e: MouseEvent): void {
   const r = active.getBoundingClientRect()
   const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 7
   const rx = -((e.clientY - (r.top + r.height / 2)) / r.height) * 5
+  // 倾角期间关闭过渡，避免每帧重启 0.5s transition
+  stageRef.value?.classList.add('tilting')
   cancelAnimationFrame(tiltRaf)
   tiltRaf = requestAnimationFrame(() => {
     const card = active.querySelector('.card') as HTMLElement | null
@@ -348,11 +345,14 @@ const { bindWheel, unbindWheel } = useFaceWheel(() => step(1), () => step(-1))
 /** 移动端（≤820px）降级为纵向卡片栈：滚动时高亮进入视口的面 */
 let mobileObserver: IntersectionObserver | null = null
 
+onBeforeMount(() => {
+  // 首帧前锁定一屏，避免挂载后隐藏页脚造成布局跳动
+  document.body.classList.add('home-fullscreen')
+})
+
 onMounted(() => {
   const stage = stageRef.value
   if (!stage) return
-  // 首页锁定一屏：隐藏 layout 页脚（滚轮接管 + 无滚动条）
-  document.body.classList.add('home-fullscreen')
   stage.addEventListener('pointerdown', onDown)
   stage.addEventListener('pointermove', onMove)
   stage.addEventListener('pointerup', onUp)
@@ -362,6 +362,7 @@ onMounted(() => {
   bindWheel(window)
   stage.addEventListener('mousemove', onTilt)
   stage.addEventListener('mouseleave', () => {
+    stage.classList.remove('tilting')
     // 鼠标离场：倾角复位
     faceEls.forEach((f) => {
       const card = f?.querySelector('.card') as HTMLElement | null
@@ -371,8 +372,6 @@ onMounted(() => {
   })
   window.addEventListener('keydown', onKeydown)
   faceEls.forEach((el, i) => el?.addEventListener('click', () => onFaceClick(i)))
-
-  render()
 
   // 移动端（≤820px）降级为纵向卡片栈：滚动时高亮进入视口的面
   if ('IntersectionObserver' in window) {
@@ -510,6 +509,12 @@ onBeforeUnmount(() => {
   letter-spacing: 0.04em;
 }
 
+/* 首页卡片做 3D 变换时，顶栏毛玻璃会反复重算背景 → 改为不透明 */
+:global(body.home-fullscreen .topbar) {
+  backdrop-filter: none;
+  background: var(--paper);
+}
+
 .stage {
   position: relative;
   /* 卡片缩小：高度吃剩余空间（减去 intro 与 controls 的预算） */
@@ -550,18 +555,38 @@ onBeforeUnmount(() => {
     rotateY(var(--ry, 0deg))
     scale(var(--s, 1));
   opacity: var(--o, 1);
+  /* 焦点卡 blur(0) 保持清晰；两侧卡压暗 + 虚化，形成景深 */
+  filter: brightness(var(--b, 1)) saturate(var(--sat, 1)) blur(var(--blur, 0px));
   transition:
     transform 0.72s var(--ease),
     opacity 0.72s var(--ease),
-    filter 0.72s var(--ease);
+    filter 0.45s var(--ease);
+}
+/* 非当前面：纸色遮罩 + 模糊叠加，视觉上退到背景层 */
+.face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: var(--paper-2);
+  opacity: var(--veil, 0);
+  pointer-events: none;
+  z-index: 6;
+  transition: opacity 0.72s var(--ease);
+}
+.face.no-anim::after {
+  transition: none;
+}
+/* 鼠标倾角期间关闭卡片 transform 过渡，避免每帧重启过渡造成卡顿 */
+.stage.tilting .card {
+  transition: none;
+}
+/* 只有当前面提升为合成层，避免四张大卡长期占用 GPU 显存 */
+.face.is-active {
   will-change: transform, opacity;
 }
 .face.no-anim {
   transition: none;
-}
-/* 只有非当前面才压暗/模糊：当前面不套 filter，避免文字被反复栅格化 */
-.face:not(.is-active) {
-  filter: brightness(var(--b, 1)) saturate(var(--sat, 1)) blur(var(--blur, 0px));
 }
 
 /* ================= 面板 ================= */
@@ -613,10 +638,18 @@ onBeforeUnmount(() => {
   );
   transform: translate(-50%, -50%) rotate(0deg);
   animation: spin 3.6s linear infinite;
+  animation-play-state: paused;
   will-change: transform;
 }
 .face.is-active .flow {
   opacity: 1;
+  visibility: visible;
+}
+.face.is-active .flow i {
+  animation-play-state: running;
+}
+.face:not(.is-active) .flow {
+  visibility: hidden;
 }
 @keyframes spin {
   to {
