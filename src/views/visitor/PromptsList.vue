@@ -56,7 +56,7 @@
           </div>
         </div>
       </div>
-      <p class="filter-note">标签由已发布内容自动聚合，无需手工维护分类 · 点击卡片上的标签可直接筛选</p>
+      <p class="filter-note">标签由已发布内容自动聚合，顺序跟随后台案例顺序 · 点击卡片上的标签可直接筛选</p>
 
       <!-- 案例卡片网格 -->
       <div v-if="visible.length" class="front-grid cols-3">
@@ -147,13 +147,26 @@ const sortDir = ref<'default' | 'desc' | 'asc'>('default')
 /** 当前选中的标签（空串 = 全部） */
 const activeTag = ref('')
 
-/** 标签计数（按出现次数聚合，倒序） */
+/** 标签首次出现的位置（entries 已按后台手动顺序返回，越靠前的条目越先定义标签顺序） */
+const tagOrder = computed<Map<string, number>>(() => {
+  const map = new Map<string, number>()
+  entries.value.forEach((e, index) => {
+    for (const t of e.tags ?? []) if (!map.has(t)) map.set(t, index)
+  })
+  return map
+})
+
+/** 标签计数（按出现次数聚合；顺序跟随后台条目顺序，首次出现靠前的标签排在前面） */
 const tagCounts = computed<Array<[string, number]>>(() => {
   const map = new Map<string, number>()
   for (const e of entries.value) {
     for (const t of e.tags ?? []) map.set(t, (map.get(t) ?? 0) + 1)
   }
-  return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  const order = tagOrder.value
+  return [...map.entries()].sort(
+    (a, b) =>
+      (order.get(a[0]) ?? 0) - (order.get(b[0]) ?? 0) || b[1] - a[1] || a[0].localeCompare(b[0]),
+  )
 })
 
 /** 标签 chip 是否展开「更多」 */
