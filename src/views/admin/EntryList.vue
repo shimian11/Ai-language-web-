@@ -47,6 +47,9 @@
       <button class="am-btn sm" type="button" :disabled="batchSaving" @click="batchStatus('DRAFT')">
         批量下架
       </button>
+      <button class="am-btn sm danger" type="button" :disabled="batchSaving" @click="batchRemove()">
+        批量删除
+      </button>
       <span class="am-spacer"></span>
       <button class="am-btn sm" type="button" @click="clearSelection">清空选择</button>
     </div>
@@ -135,6 +138,14 @@
                           @click.stop="batchGroupStatus(g, 'DRAFT')"
                         >
                           批量下架
+                        </button>
+                        <button
+                          class="am-btn sm danger"
+                          type="button"
+                          :disabled="batchSaving"
+                          @click.stop="batchGroupRemove(g)"
+                        >
+                          批量删除
                         </button>
                       </div>
                     </div>
@@ -426,6 +437,36 @@ async function batchStatus(status: EntryStatus, ids?: number[]): Promise<void> {
 function batchGroupStatus(g: Group, status: EntryStatus): void {
   const ids = entries.value.filter((e) => groupKeyOf(e) === g.key).map((e) => e.id)
   void batchStatus(status, ids)
+}
+
+/** 父条目右侧的批量删除：作用于该分组全部条目 */
+function batchGroupRemove(g: Group): void {
+  const ids = entries.value.filter((e) => groupKeyOf(e) === g.key).map((e) => e.id)
+  void batchRemove(ids)
+}
+
+/** 批量删除：二次确认后逐条调用删除接口，交互与批量上下架一致 */
+async function batchRemove(ids?: number[]): Promise<void> {
+  const targetIds = ids ?? [...selectedIds.value]
+  if (!targetIds.length) return
+  try {
+    await ElMessageBox.confirm(`确认删除 ${targetIds.length} 条案例？删除后不可恢复。`, '批量删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  batchSaving.value = true
+  try {
+    await Promise.all(targetIds.map((id) => removeEntry(id)))
+    ElMessage.success(`已删除 ${targetIds.length} 条`)
+    clearSelection()
+    await load()
+  } finally {
+    batchSaving.value = false
+  }
 }
 
 /** 分组上移/下移：按手动顺序里的分组块交换 */
@@ -755,6 +796,17 @@ onMounted(load)
 .am-btn.sm {
   height: 30px;
   font-size: 12px;
+}
+
+/* 删除类操作：与上下架保持同一排布，仅用锈红区分危险级别 */
+.am-btn.danger {
+  color: #c0392b;
+  border-color: color-mix(in srgb, #c0392b 30%, var(--line));
+}
+
+.am-btn.danger:hover {
+  border-color: #c0392b;
+  background: color-mix(in srgb, #c0392b 6%, var(--card));
 }
 
 .am-btn.xs {
