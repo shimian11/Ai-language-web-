@@ -601,7 +601,7 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   box-shadow: 0 2px 0 var(--line), 0 26px 60px rgba(58, 43, 28, 0.18);
   transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry2, 0deg));
-  transition: transform 0.5s var(--spring), box-shadow 0.3s ease-out;
+  transition: transform 0.34s var(--ease), box-shadow 0.3s ease-out;
 }
 /* 边框流动光效：独立图层，只旋转内部圆盘（transform 合成） */
 .flow {
@@ -664,7 +664,7 @@ onBeforeUnmount(() => {
     0 0 26px rgba(192, 57, 43, 0.1);
 }
 .face:not(.is-active):hover .card {
-  transform: translateY(-8px) scale(1.03);
+  transform: translateY(-6px);
 }
 
 /* ================= 封面视觉区 ================= */

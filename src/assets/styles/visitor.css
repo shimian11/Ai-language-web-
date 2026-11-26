@@ -218,24 +218,22 @@
   overflow: hidden;
   transform-origin: center;
   transition:
-    transform 0.55s var(--spring),
-    box-shadow 0.3s var(--ease),
-    border-color 0.3s;
-  will-change: transform;
+    transform 0.24s var(--ease),
+    box-shadow 0.24s var(--ease),
+    border-color 0.24s var(--ease);
 }
-/* 悬停果冻：先挤压再回弹，落在放大的稳态 */
+/* 悬停：纸片抬起（只位移与阴影，不缩放）；抬得更高 + 锈红描边加粗更醒目 */
 :where(.visitor-page) a.card:hover,
 :where(.visitor-page) .card.link:hover {
-  animation: card-jelly 0.62s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  box-shadow: var(--shadow-hover);
-  border-color: color-mix(in srgb, var(--red) 32%, var(--line));
+  transform: translateY(-7px);
+  border-color: color-mix(in srgb, var(--red) 55%, var(--line));
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--red) 55%, transparent),
+    var(--shadow-hover);
 }
-@keyframes card-jelly {
-  0%   { transform: translateY(0) scale(1, 1); }
-  28%  { transform: translateY(-6px) scale(1.035, 0.965); }
-  52%  { transform: translateY(-4px) scale(0.983, 1.042); }
-  74%  { transform: translateY(-5px) scale(1.027, 0.992); }
-  100% { transform: translateY(-5px) scale(1.025, 1.025); }
+:where(.visitor-page) a.card:active,
+:where(.visitor-page) .card.link:active {
+  transform: translateY(-2px);
 }
 :where(.visitor-page) .card .thumb {
   position: relative;
@@ -365,22 +363,15 @@
   border-bottom: 1px solid var(--line);
   transform-origin: left center;
   transition:
-    transform 0.5s var(--spring),
+    transform 0.24s var(--ease),
     background 0.22s,
     padding 0.22s;
-  will-change: transform;
 }
-/* 文章条目悬停：轻微放大 + 果冻回弹 */
+/* 文章条目悬停：向右轻移 + 底色提亮，不缩放 */
 :where(.visitor-page) .list-item:hover {
-  animation: list-jelly 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform: translateX(3px);
   background: color-mix(in srgb, var(--paper-2) 70%, transparent);
   padding-left: 14px;
-}
-@keyframes list-jelly {
-  0%   { transform: scale(1, 1); }
-  30%  { transform: scale(1.014, 0.986); }
-  58%  { transform: scale(0.996, 1.012); }
-  100% { transform: scale(1.01, 1.01); }
 }
 :where(.visitor-page) .list-date {
   font-family: var(--font-mono);
@@ -667,10 +658,10 @@
   align-items: start;
   padding: 14px 0;
   transform-origin: left center;
-  transition: transform 0.5s var(--spring);
+  transition: transform 0.24s var(--ease);
 }
 :where(.visitor-page) .t-item:hover {
-  animation: list-jelly 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform: translateX(3px);
 }
 :where(.visitor-page) .t-date {
   font-family: var(--font-mono);
@@ -765,10 +756,10 @@
   position: relative;
   z-index: 1;
   margin-top: 8px;
-  transition: transform 0.4s var(--spring);
+  transition: transform 0.22s var(--ease);
 }
 :where(.visitor-page) .htl-node:hover .htl-dot {
-  transform: scale(1.3);
+  transform: scale(1.25);
 }
 :where(.visitor-page) .htl-node.milestone .htl-dot {
   background: var(--gold);
