@@ -40,8 +40,8 @@
         </div>
       </div>
 
-      <!-- 加载态 -->
-      <div v-if="loading" class="empty"><p>正在加载…</p></div>
+      <!-- 加载态：与真实列表同构的骨架，避免纯文字「正在加载」 -->
+      <PageSkeleton v-if="loading" :count="3" variant="list" />
 
       <!-- 加载失败 -->
       <div v-else-if="error" class="empty">
@@ -72,6 +72,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import { listPublishedArticles } from '@/api/article'
+import PageSkeleton from '@/components/common/PageSkeleton.vue'
 import type { Article, ArticleTopic } from '@/types'
 
 /** 栏目定义（key 与 article.topic 对应） */

@@ -14,8 +14,8 @@
         </p>
       </div>
 
-      <!-- 加载态 / 错误态 -->
-      <div v-if="loading" class="empty"><p>正在加载…</p></div>
+      <!-- 加载态：与真实列表同构的骨架 / 错误态 -->
+      <PageSkeleton v-if="loading" :count="3" variant="list" />
       <div v-else-if="error" class="empty">
         <p>{{ error }}</p>
         <button class="btn" type="button" @click="load">重新加载</button>
@@ -95,6 +95,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import { listCompanies, listPublishedArticles } from '@/api/article'
+import PageSkeleton from '@/components/common/PageSkeleton.vue'
 import type { CompanyItem } from '@/api/article'
 import type { Article } from '@/types'
 

@@ -1,9 +1,9 @@
 <template>
-  <div class="skeleton-grid">
+  <div class="skeleton-grid" :class="{ 'as-list': variant === 'list' }">
     <div v-for="index in count" :key="index" class="skeleton-card">
       <el-skeleton animated>
         <template #template>
-          <el-skeleton-item variant="image" class="sk-img" />
+          <el-skeleton-item v-if="variant !== 'list'" variant="image" class="sk-img" />
           <el-skeleton-item variant="text" class="sk-line w60" />
           <el-skeleton-item variant="text" class="sk-line" />
           <el-skeleton-item variant="text" class="sk-line short" />
@@ -14,7 +14,10 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{ count?: number }>(), { count: 8 })
+withDefaults(defineProps<{ count?: number; variant?: 'grid' | 'list' }>(), {
+  count: 8,
+  variant: 'grid',
+})
 </script>
 
 <style scoped>
@@ -44,6 +47,16 @@ withDefaults(defineProps<{ count?: number }>(), { count: 8 })
   padding: 14px;
   display: inline-block;
   width: 100%;
+}
+
+/* 列表型页面（心得/面试/实习）用单列骨架，与真实列表同宽同节奏 */
+.skeleton-grid.as-list {
+  column-count: 1;
+}
+
+.as-list .skeleton-card {
+  padding: 22px 18px;
+  border-radius: 12px;
 }
 
 .sk-img {
