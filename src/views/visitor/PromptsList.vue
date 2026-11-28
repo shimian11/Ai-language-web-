@@ -58,8 +58,24 @@
       </div>
       <p class="filter-note">标签由已发布内容自动聚合，顺序跟随后台案例顺序 · 点击卡片上的标签可直接筛选</p>
 
+      <!-- 加载骨架：与卡片同构，首屏不空白、不跳版 -->
+      <div v-if="loading" class="front-grid cols-3">
+        <div v-for="n in 6" :key="`sk-${n}`" class="card sk-card">
+          <div class="sk-thumb shimmer"></div>
+          <div class="sk-body">
+            <span class="sk-line w40 shimmer"></span>
+            <span class="sk-line w84 shimmer"></span>
+            <span class="sk-line w58 shimmer"></span>
+            <div class="sk-pills">
+              <span class="sk-pill shimmer"></span>
+              <span class="sk-pill shimmer"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 案例卡片网格 -->
-      <div v-if="visible.length" class="front-grid cols-3">
+      <div v-else-if="visible.length" class="front-grid cols-3">
         <RouterLink
           v-for="entry in visible"
           :key="entry.id"
@@ -67,17 +83,8 @@
           :to="`/prompts/${entry.id}`"
         >
           <div class="thumb">
-            <!-- 有 HTML 源码时直接渲染真实效果（禁用脚本、隐藏滚动条） -->
-            <iframe
-              v-if="entry.htmlSource"
-              class="thumb-frame"
-              :srcdoc="thumbDoc(entry.htmlSource)"
-              scrolling="no"
-              sandbox=""
-              loading="lazy"
-              tabindex="-1"
-              aria-hidden="true"
-            ></iframe>
+            <!-- 有 HTML 源码时渲染真实效果；封面进入视口才注入 srcdoc，避免首屏解析全部 iframe -->
+            <LazyFrame v-if="entry.htmlSource" :doc="thumbDoc(entry.htmlSource)" />
             <template v-else>
               <div class="art-grid"></div>
               <!-- 无 HTML 时的 CSS 微缩封面：按样式 + id 哈希，保证同组也有区分 -->
@@ -126,6 +133,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import { pageEntries } from '@/api/entry'
+import LazyFrame from '@/components/business/LazyFrame.vue'
 import type { Entry } from '@/types'
 
 /** 全量已发布条目（个人站量级一次取回；标签自动聚合与搜索在前端完成，后端同时提供 tag 精确筛选供大数量级使用） */
@@ -355,20 +363,73 @@ onMounted(async () => {
   color: var(--ink-3);
   margin: -14px 0 26px;
 }
-/* HTML 缩略封面：真实渲染、无滚动条 */
+/* HTML 缩略封面：真实渲染、无滚动条（iframe 由 LazyFrame 内部懒注入） */
 .prompt-card .thumb {
   position: relative;
   overflow: hidden;
 }
-.thumb-frame {
+/* 首屏骨架：与卡片同构，尺寸对齐缩略图与正文 */
+.sk-card {
+  overflow: hidden;
+}
+.sk-thumb {
+  height: 190px;
+  background: #f1eadf;
+}
+.sk-body {
+  padding: 14px 16px 18px;
+}
+.sk-line {
+  display: block;
+  height: 9px;
+  border-radius: 5px;
+  background: #ede6da;
+  margin-top: 9px;
+}
+.sk-line:first-child {
+  margin-top: 0;
+}
+.w40 {
+  width: 40%;
+}
+.w84 {
+  width: 84%;
+}
+.w58 {
+  width: 58%;
+}
+.sk-pills {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.sk-pill {
+  width: 48px;
+  height: 18px;
+  border-radius: 5px;
+  background: #ede6da;
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: '';
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-  pointer-events: none;
-  background: var(--paper-2);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: translateX(-100%);
+  animation: sk-sheen 1.4s ease-in-out infinite;
+}
+@keyframes sk-sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after {
+    animation: none;
+  }
 }
 /* 以具体样式作为卡片大标题 */
 .prompt-card .card-title {
